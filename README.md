@@ -16,7 +16,7 @@ A classical arcade game implemented in C using Raylib. The game is created as pl
 
 ## Development roadmap
 ### Phase 00
-- [ ] Window creation
+- [x] Window creation
 - [ ] Game loop tick and render tick separation
 - [ ] Game loop timing
 - [ ] Game loop exit
