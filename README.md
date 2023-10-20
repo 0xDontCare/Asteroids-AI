@@ -19,12 +19,12 @@ A classical arcade game implemented in C using Raylib. The game is created as pl
 - [x] Window creation
 - [x] Game loop tick and render tick separation
 - [x] Game loop timing
-- [ ] Game loop exit
+- [x] Game loop exit
 
 ### Phase 10
-- [ ] Add player
-- [ ] Player movement
-- [ ] Screen wrapping
+- [x] Add player
+- [x] Player movement
+- [x] Screen wrapping
 
 ### Phase 11
 - [ ] Add shared memory for game state
