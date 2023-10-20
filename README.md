@@ -1,4 +1,4 @@
-# Neural Asteroids 
+# Asteroids-AI
 A classical arcade game implemented in C using Raylib. The game is created as platform for training neural network agents.
 
 ## Installation
@@ -17,8 +17,8 @@ A classical arcade game implemented in C using Raylib. The game is created as pl
 ## Development roadmap
 ### Phase 00
 - [x] Window creation
-- [ ] Game loop tick and render tick separation
-- [ ] Game loop timing
+- [x] Game loop tick and render tick separation
+- [x] Game loop timing
 - [ ] Game loop exit
 
 ### Phase 10
