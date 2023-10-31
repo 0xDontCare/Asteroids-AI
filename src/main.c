@@ -59,6 +59,9 @@ int main(void) {
             if (IsKeyDown(KEY_W)) {
                 Vector2 deltaV = (Vector2){player->acceleration * cosf(player->physicsComponent.rotation) * fixedTimeStep, player->acceleration * sinf(player->physicsComponent.rotation) * fixedTimeStep};
                 player->physicsComponent.speed = Vector2Add(player->physicsComponent.speed, deltaV);
+            } else {
+                player->physicsComponent.speed = Vector2Scale(player->physicsComponent.speed, 0.99);
+                //if(Vector2Length(player->physicsComponent.speed) < 0.1f) player->physicsComponent.speed = Vector2Zero();
             }
             if (IsKeyDown(KEY_A)) {
                 player->physicsComponent.rotation -= 0.1;
