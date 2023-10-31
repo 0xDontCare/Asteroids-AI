@@ -28,7 +28,7 @@ A classical arcade game implemented in C using Raylib. The game is created as pl
 
 ### Phase 1.1
 - [ ] Segment program source code into separate files
-- [ ] Add shared memory for game state
+- [x] Add shared memory for game state
 - [ ] Separate logic and rendering threads
 - [ ] Thread synchronization
 

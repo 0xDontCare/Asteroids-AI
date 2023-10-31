@@ -1,43 +1,139 @@
 #include "asteroidsShared.h"
 
+#include <fcntl.h>
 #include <pthread.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <sys/mman.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
-struct sharedMemory_s *allocateSharedMemory() {
-    struct sharedMemory_s *sharedMemory = (struct sharedMemory_s *)mmap(NULL, sizeof(struct sharedMemory_s), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
-    if (sharedMemory == NULL) {
-        perror("Failed to allocate shared memory");
-        exit(1);
-    } else {
-        return sharedMemory;
+struct sharedInput_s *allocateSharedInput(const char *sharedMemoryName) {
+    int sharedMemoryFd = shm_open(sharedMemoryName, O_CREAT | O_RDWR, 0666);
+    if (sharedMemoryFd == -1) {
+        perror("shm_open");
+        exit(EXIT_FAILURE);
+    }
+
+    if (ftruncate(sharedMemoryFd, sizeof(struct sharedInput_s)) == -1) {
+        perror("ftruncate");
+        exit(EXIT_FAILURE);
+    }
+
+    struct sharedInput_s *sharedInput = mmap(NULL, sizeof(struct sharedInput_s), PROT_READ | PROT_WRITE, MAP_SHARED, sharedMemoryFd, 0);
+    if (sharedInput == MAP_FAILED) {
+        perror("mmap");
+        exit(EXIT_FAILURE);
+    }
+
+    return sharedInput;
+}
+
+void initSharedInput(struct sharedInput_s *sharedInput) {
+    pthread_mutexattr_t mutexAttr;
+    pthread_mutexattr_init(&mutexAttr);
+    pthread_mutexattr_setpshared(&mutexAttr, PTHREAD_PROCESS_SHARED);
+    pthread_mutex_init(&sharedInput->mutex, &mutexAttr);
+    pthread_mutexattr_destroy(&mutexAttr);
+
+    sharedInput->isKeyDownW = 0;
+    sharedInput->isKeyDownA = 0;
+    sharedInput->isKeyDownD = 0;
+    sharedInput->isKeyDownSpace = 0;
+}
+
+void destroySharedInput(struct sharedInput_s *sharedInput) {
+    pthread_mutex_destroy(&sharedInput->mutex);
+
+    if (munmap(sharedInput, sizeof(struct sharedInput_s)) == -1) {
+        perror("munmap");
+        exit(EXIT_FAILURE);
+    }
+
+    if (shm_unlink("sharedInput") == -1) {
+        perror("shm_unlink");
+        exit(EXIT_FAILURE);
     }
 }
 
-void initSharedMemory(struct sharedMemory_s *sharedMemory) {
-    pthread_mutexattr_t mutexAttribute;
-    pthread_mutexattr_init(&mutexAttribute);
-    pthread_mutexattr_setpshared(&mutexAttribute, PTHREAD_PROCESS_SHARED);
-    pthread_mutex_init(&sharedMemory->mutex, &mutexAttribute);
-    pthread_mutexattr_destroy(&mutexAttribute);
-    sharedMemory->playerPosX = 0.f;
-    sharedMemory->playerPosY = 0.f;
-    sharedMemory->playerRotation = 0.f;
-    sharedMemory->playerSpeedX = 0.f;
-    sharedMemory->playerSpeedY = 0.f;
-    sharedMemory->distanceFront = 0.f;
-    sharedMemory->closestAsteroidPosX = 0.f;
-    sharedMemory->closestAsteroidPosY = 0.f;
+void unloadSharedInput(struct sharedInput_s *sharedInput) {
+    if (munmap(sharedInput, sizeof(struct sharedInput_s)) == -1) {
+        perror("munmap");
+        exit(EXIT_FAILURE);
+    }
 }
 
-void destroySharedMemory(struct sharedMemory_s *sharedMemory) {
-    pthread_mutex_destroy(&sharedMemory->mutex);
-    munmap(sharedMemory, sizeof(struct sharedMemory_s));
+void lockSharedInput(struct sharedInput_s *sharedInput) {
+    pthread_mutex_lock(&sharedInput->mutex);
 }
 
-inline void lockSharedMemory(struct sharedMemory_s *sharedMemory) {
-    pthread_mutex_lock(&sharedMemory->mutex);
+void unlockSharedInput(struct sharedInput_s *sharedInput) {
+    pthread_mutex_unlock(&sharedInput->mutex);
 }
 
-inline void unlockSharedMemory(struct sharedMemory_s *sharedMemory) {
-    pthread_mutex_unlock(&sharedMemory->mutex);
+struct sharedOutput_s *allocateSharedOutput(const char *sharedMemoryName) {
+    int sharedMemoryFd = shm_open(sharedMemoryName, O_CREAT | O_RDWR, 0666);
+    if (sharedMemoryFd == -1) {
+        perror("shm_open");
+        exit(EXIT_FAILURE);
+    }
+
+    if (ftruncate(sharedMemoryFd, sizeof(struct sharedOutput_s)) == -1) {
+        perror("ftruncate");
+        exit(EXIT_FAILURE);
+    }
+
+    struct sharedOutput_s *sharedOutput = mmap(NULL, sizeof(struct sharedOutput_s), PROT_READ | PROT_WRITE, MAP_SHARED, sharedMemoryFd, 0);
+    if (sharedOutput == MAP_FAILED) {
+        perror("mmap");
+        exit(EXIT_FAILURE);
+    }
+
+    return sharedOutput;
+}
+
+void initSharedOutput(struct sharedOutput_s *sharedOutput) {
+    pthread_mutexattr_t mutexAttr;
+    pthread_mutexattr_init(&mutexAttr);
+    pthread_mutexattr_setpshared(&mutexAttr, PTHREAD_PROCESS_SHARED);
+    pthread_mutex_init(&sharedOutput->mutex, &mutexAttr);
+    pthread_mutexattr_destroy(&mutexAttr);
+
+    sharedOutput->playerPosX = 0;
+    sharedOutput->playerPosY = 0;
+    sharedOutput->playerRotation = 0;
+    sharedOutput->playerSpeedX = 0;
+    sharedOutput->playerSpeedY = 0;
+    sharedOutput->distanceFront = 0;
+    sharedOutput->closestAsteroidPosX = 0;
+    sharedOutput->closestAsteroidPosY = 0;
+}
+
+void destroySharedOutput(struct sharedOutput_s *sharedOutput) {
+    pthread_mutex_destroy(&sharedOutput->mutex);
+
+    if (munmap(sharedOutput, sizeof(struct sharedOutput_s)) == -1) {
+        perror("munmap");
+        exit(EXIT_FAILURE);
+    }
+
+    if (shm_unlink("sharedOutput") == -1) {
+        perror("shm_unlink");
+        exit(EXIT_FAILURE);
+    }
+}
+
+void unloadSharedOutput(struct sharedOutput_s *sharedOutput) {
+    if (munmap(sharedOutput, sizeof(struct sharedOutput_s)) == -1) {
+        perror("munmap");
+        exit(EXIT_FAILURE);
+    }
+}
+
+void lockSharedOutput(struct sharedOutput_s *sharedOutput) {
+    pthread_mutex_lock(&sharedOutput->mutex);
+}
+
+void unlockSharedOutput(struct sharedOutput_s *sharedOutput) {
+    pthread_mutex_unlock(&sharedOutput->mutex);
 }
