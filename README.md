@@ -1,5 +1,5 @@
 # Asteroids-AI
-Asteroids-AI is a project that aims to create an artificial intelligence agent that can play the classic arcade game Asteroids. The agent will be trained using a genetic algorithm and will be implemented using a neural network. The project is written in C and uses the [Raylib]() library for graphics and input. The project is divided into three parts:
+Asteroids-AI is a project that aims to create an artificial intelligence agent that can play the classic arcade game Asteroids. The agent will be trained using a genetic algorithm and will be implemented using a neural network. The project is written in C and uses the [Raylib](https://github.com/raysan5/raylib) library for graphics and input. The project is divided into three parts:
 - Game: The game itself that can be played by a human player or controlled by a neural network agent
 - Neural network agent: The neural network agent that controls the game
 - Management program: A program that manages the training of the neural network agent
@@ -47,6 +47,7 @@ To be implemented soon...
 - [ ] Segment program source code into separate files
 - [x] Add shared memory for game state
 - [ ] Separate logic and rendering threads
+- [ ] Headless mode
 - [ ] Thread synchronization
 
 ### Phase 1.2
