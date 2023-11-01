@@ -1,18 +1,35 @@
 # Asteroids-AI
-A classical arcade game implemented in C using Raylib. The game is created as platform for training neural network agents.
+Asteroids-AI is a project that aims to create an artificial intelligence agent that can play the classic arcade game Asteroids. The agent will be trained using a genetic algorithm and will be implemented using a neural network. The project is written in C and uses the [Raylib]() library for graphics and input. The project is divided into three parts:
+- Game: The game itself that can be played by a human player or controlled by a neural network agent
+- Neural network agent: The neural network agent that controls the game
+- Management program: A program that manages the training of the neural network agent
+
+## Detailed description
+### Game
+The game is a classical arcade game where the player controls a spaceship and has to destroy asteroids. The player can move the spaceship in all directions and shoot bullets. The asteroids move in random directions and wrap around the screen edges. When a bullet hits an asteroid, the asteroid is destroyed and the player gets points. When an asteroid hits the spaceship, the spaceship is destroyed and the game is over. For training purposes, the game has shared memory interface that allows the game to be controlled by a neural network agent and has ability to be started in headless mode. The game can be run in two modes:
+- Normal mode: The game is controlled by the player (shared memory is disabled)
+- Training mode: The game is controlled by a neural network agent (shared memory is enabled and keyboard input is disabled, except for the escape key which exits the game)
+
+### Neural network agent
+To be implemented soon...
+
+### Management program
+To be implemented soon...
 
 ## Installation
 ### Linux
 1. Install [Raylib](https://github.com/raysan5/raylib)
 2. Clone the repository
-3. Run `make build` in the root directory of the repository
-4. Run `./bin/asteroids`
+3. Run `make build` in the root directory of the cloned repository
 
 ### Windows
-- Not available yet (easiest way would be to use WSL for now)
+- Not available (easiest way would be to use WSL or virtual machine for now)
 
 ## Controls
-- No controls implemented yet
+- `W` - Move forward
+- `A` - Rotate left
+- `D` - Rotate right
+- `<n/a>` - Shoot
 
 ## Development roadmap
 ### Phase 0.0
@@ -47,6 +64,7 @@ A classical arcade game implemented in C using Raylib. The game is created as pl
 ### Phase 1.4
 - [ ] Add score
 - [ ] Add time counter
+- [ ] Add level counter
 - [ ] Add game over screen
 - [ ] Add sound effects (optional)
 
@@ -55,11 +73,16 @@ A classical arcade game implemented in C using Raylib. The game is created as pl
 - [ ] Random agent (random actions)
 
 ### Phase 2.1
+- [ ] Training management program
+- [ ] Running multiple agents and games in parallel
+- [ ] Evaluation of agents (score, time, level)
+
+### Phase 3.0
 - [ ] Fitness function (score, time)
 - [ ] Serialization of neural network data
 - [ ] Deserialization of neural network data
 
-### Phase 3.0
+### Phase 3.1
 - [ ] Implement genetic algorithm
 - [ ] Add training mode
 - [ ] Montage of training generations (optional)
