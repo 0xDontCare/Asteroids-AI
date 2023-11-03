@@ -2,15 +2,19 @@
 #include <raylib.h>
 #include <raymath.h>
 #include <stdio.h>
+#include <time.h>
 
 #include "asteroidsObjects.h"
-//#include "asteroidsShared.h"
+#include "asteroidsShared.h"
 #include "asteroidsStructures.h"
 
 int main(void) {
     // game window dimensions (if window resizes, playing dimensions stay same)
     const int windowWidth = 1024;
     const int windowHeight = 768;
+    const char *windowName = "Testing window";
+    int headlessRun = 0, windowInitialized = 0;
+    //int exitState = 0;
 
     // game constants
     const float base_playerAcceleration = 500;
@@ -35,21 +39,45 @@ int main(void) {
     ((ComponentRotation *)dynArrayGet(RotationComponents, player->rotationID))->rotationSpeed = 0;
     ((ComponentCollision *)dynArrayGet(CollisionComponents, player->hitboxID))->hitbox = (Vector2){50, 50};
 
+    // creating game memory interfaces
+    struct sharedInput_s *sharedInput = allocateSharedInput("sharedInput");
+    lockSharedInput(sharedInput);
+    initSharedInput(sharedInput);
+    unlockSharedInput(sharedInput);
+    struct sharedOutput_s *sharedOutput = allocateSharedOutput("sharedOutput");
+    lockSharedOutput(sharedOutput);
+    initSharedOutput(sharedOutput);
+    unlockSharedOutput(sharedOutput);
+
+    // update game interfaces
+    lockSharedOutput(sharedOutput);
+    sharedOutput->playerPosX = ((ComponentMotion *)dynArrayGet(MotionComponents, player->movementID))->position.x;
+    sharedOutput->playerPosY = ((ComponentMotion *)dynArrayGet(MotionComponents, player->movementID))->position.y;
+    sharedOutput->playerRotation = ((ComponentRotation *)dynArrayGet(RotationComponents, player->rotationID))->rotation;
+    sharedOutput->playerSpeedX = ((ComponentMotion *)dynArrayGet(MotionComponents, player->movementID))->velocity.x;
+    sharedOutput->playerSpeedY = ((ComponentMotion *)dynArrayGet(MotionComponents, player->movementID))->velocity.y;
+    unlockSharedOutput(sharedOutput);
+
     // create window and unlock maximum framerate (which will be regulated by other means)
-    InitWindow(windowWidth, windowHeight, "Testing window");
-    SetTargetFPS(0);
+    if (!headlessRun) {
+        InitWindow(windowWidth, windowHeight, windowName);
+        SetTargetFPS(0);
+        windowInitialized = 1;
+    }
 
     // logic timing variables
+    struct timespec currentTime;
     const double fixedTimeStep = 1.0 / 60.0;
     double accumulator = 0.0;
-    double currentTime = GetTime();
+    clock_gettime(CLOCK_MONOTONIC, &currentTime);
     double avgFrameTime = 0.0;
 
     // main game loop
-    while (!WindowShouldClose()) {
+    while (!IsKeyPressed(KEY_ESCAPE)) {
         // update timing
-        double newTime = GetTime();
-        double frameTime = newTime - currentTime;
+        struct timespec newTime;
+        clock_gettime(CLOCK_MONOTONIC, &newTime);
+        double frameTime = (newTime.tv_sec - currentTime.tv_sec) + (newTime.tv_nsec - currentTime.tv_nsec) / 1e9;
         if (frameTime > 0.25) {  // note: max frame time to avoid spiral of death
             frameTime = 0.25;
         }
@@ -65,7 +93,8 @@ int main(void) {
         while (accumulator >= fixedTimeStep) {
             // pre-rendering logic (load resources, update physics, etc.)
 
-            // input processing (updating player's motion and rotation components)
+            // input-based component updates
+            if (IsKeyDown(KEY_H)) headlessRun = 1;
             if (IsKeyDown(KEY_W)) {
                 float rotation = ((ComponentRotation *)dynArrayGet(RotationComponents, player->rotationID))->rotation;
                 Vector2 acceleration = Vector2Scale((Vector2){cosf(rotation), sinf(rotation)}, base_playerAcceleration);
@@ -82,19 +111,33 @@ int main(void) {
             } else
                 ((ComponentRotation *)dynArrayGet(RotationComponents, player->rotationID))->rotationSpeed = 0.f;
 
-            // updating component lists
+            // headless mode update
+            if (headlessRun && windowInitialized) {
+                CloseWindow();
+                windowInitialized = 0;
+            } else if (!headlessRun && !windowInitialized) {
+                InitWindow(windowWidth, windowHeight, windowName);
+                SetTargetFPS(0);
+                windowInitialized = 1;
+            }
+
+            // time-based component updates
             for (size_t i = 0; i < MotionComponents->size; i++) {
                 ComponentMotion *motion = (ComponentMotion *)dynArrayGet(MotionComponents, i);
 
                 // updating velocity and position
                 motion->velocity = Vector2Add(motion->velocity, Vector2Scale(motion->acceleration, fixedTimeStep));
                 motion->position = Vector2Add(motion->position, Vector2Scale(motion->velocity, fixedTimeStep));
-                
+
                 // position wrapping
-                if(motion->position.x >= windowWidth) motion->position.x -= windowWidth;
-                else if(motion->position.x < 0) motion->position.x += windowWidth;
-                if(motion->position.y >= windowHeight) motion->position.y -= windowHeight;
-                else if(motion->position.y < 0) motion->position.y += windowHeight;
+                if (motion->position.x >= windowWidth)
+                    motion->position.x -= windowWidth;
+                else if (motion->position.x < 0)
+                    motion->position.x += windowWidth;
+                if (motion->position.y >= windowHeight)
+                    motion->position.y -= windowHeight;
+                else if (motion->position.y < 0)
+                    motion->position.y += windowHeight;
             }
             for (size_t i = 0; i < RotationComponents->size; i++) {
                 ComponentRotation *rotation = (ComponentRotation *)dynArrayGet(RotationComponents, i);
@@ -117,23 +160,40 @@ int main(void) {
         }
 
         // update rendering
-        BeginDrawing();
-        ClearBackground(BLACK);
+        if (windowInitialized) {
+            BeginDrawing();
+            ClearBackground(BLACK);
 
-        // game objects rendering
-        DrawPlayer((ComponentMotion *)dynArrayGet(MotionComponents, player->movementID), (ComponentRotation *)dynArrayGet(RotationComponents, player->rotationID), (ComponentCollision *)dynArrayGet(CollisionComponents, player->hitboxID));
+            // game objects rendering
+            DrawPlayer((ComponentMotion *)dynArrayGet(MotionComponents, player->movementID), (ComponentRotation *)dynArrayGet(RotationComponents, player->rotationID), (ComponentCollision *)dynArrayGet(CollisionComponents, player->hitboxID));
 
-        // overlay rendering
-        DrawRectangleLines(0, 0, windowWidth, windowHeight, WHITE);  // game border
-        DrawText(fpsText, 10, 10, 20, WHITE);                        // FPS counter
+            // overlay rendering
+            DrawRectangleLines(0, 0, windowWidth, windowHeight, WHITE);  // game border
+            DrawText(fpsText, 10, 10, 20, WHITE);                        // FPS counter
 
-        // end rendering
-        EndDrawing();
+            EndDrawing();
+        }
 
         // post-rendering logic (free resources, etc.)
+
+        // update shared outputs
+        lockSharedOutput(sharedOutput);
+        sharedOutput->playerPosX = ((ComponentMotion *)dynArrayGet(MotionComponents, player->movementID))->position.x;
+        sharedOutput->playerPosY = ((ComponentMotion *)dynArrayGet(MotionComponents, player->movementID))->position.y;
+        sharedOutput->playerRotation = ((ComponentRotation *)dynArrayGet(RotationComponents, player->rotationID))->rotation;
+        sharedOutput->playerSpeedX = ((ComponentMotion *)dynArrayGet(MotionComponents, player->movementID))->velocity.x;
+        sharedOutput->playerSpeedY = ((ComponentMotion *)dynArrayGet(MotionComponents, player->movementID))->velocity.y;
+        unlockSharedOutput(sharedOutput);
     }
 
-    CloseWindow();
+    if (windowInitialized) {
+        CloseWindow();
+        windowInitialized = 0;
+    }
+
+    // close shared memory
+    destroySharedInput(sharedInput);
+    destroySharedOutput(sharedOutput);
 
     // free all allocated memory
     MemFree(player);
