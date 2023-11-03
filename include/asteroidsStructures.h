@@ -12,12 +12,11 @@
 #ifndef ASTEROIDS_STRUCTURES_H
 #define ASTEROIDS_STRUCTURES_H
 
+#include <stddef.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif  // __cplusplus
-
-#include <raylib.h>
-#include <stddef.h>
 
 /**
  * @brief A simple dynamic array implementation.
@@ -27,228 +26,8 @@ typedef struct dyn_array_s {
     void **data;
     size_t size;
     size_t capacity;
+    size_t elementSize;
 } DynArray;
-
-//
-////  Entities
-//
-
-typedef struct asteroid_s {
-    int transformID;
-    int renderID;
-} Asteroid;
-
-typedef struct saucer_s {
-    int transformID;
-    int renderID;
-} Saucer;
-
-typedef struct bullet_s {
-    int transformID;
-    int renderID;
-} Bullet;
-
-typedef struct ship_s {
-    int transformID;
-    int renderID;
-} Ship;
-
-typedef struct game_s {
-    // game entities
-    Ship ship;
-    DynArray bullets;
-    DynArray asteroids;
-    DynArray saucers;
-
-    // game components
-    DynArray transforms;
-    DynArray renders;
-    DynArray physics;
-
-    // game state
-    int score;
-    int level;
-    int gameOver;
-} Game;
-
-//
-////  Components
-//
-
-typedef struct transform_s {
-    Vector2 position;
-    Vector2 velocity;
-    float rotation;
-    float rotationSpeed;
-} ComponentTransform;
-
-typedef struct render_s {
-    float radius;
-    Color color;
-} ComponentRender;
-
-typedef struct physics_s {
-    Rectangle hitbox;
-} ComponentPhysics;
-
-//
-//// Systems
-//
-
-typedef struct system_s {
-    void (*update)(Game *game);
-} System;
-
-typedef struct system_transform_s {
-    System base;
-} SystemTransform;
-
-typedef struct system_render_s {
-    System base;
-} SystemRender;
-
-typedef struct system_physics_s {
-    System base;
-} SystemPhysics;
-
-//
-////  Game
-//
-
-/**
- * @brief Initialize game state.
- *
- * @param game Game state to initialize.
- */
-void initGame(Game *game);
-
-/**
- * @brief Update game state.
- *
- * @param game Game state to update.
- */
-void updateGame(Game *game);
-
-/**
- * @brief Draw game state.
- *
- * @param game Game state to draw.
- */
-void drawGame(Game *game);
-
-//
-////  Transform
-//
-
-/**
- * @brief Initialize transform component.
- *
- * @param transform Transform component to initialize.
- * @param position Initial position.
- * @param velocity Initial velocity.
- * @param rotation Initial rotation.
- * @param rotationSpeed Initial rotation speed.
- */
-void initTransform(ComponentTransform *transform, Vector2 position, Vector2 velocity, float rotation, float rotationSpeed);
-
-/**
- * @brief Update transform component.
- *
- * @param transform Transform component to update.
- */
-void updateTransform(ComponentTransform *transform);
-
-//
-////  Render
-//
-
-/**
- * @brief Initialize render component.
- *
- * @param render Render component to initialize.
- * @param radius Initial radius.
- * @param color Initial color.
- */
-void initRender(ComponentRender *render, float radius, Color color);
-
-/**
- * @brief Update render component.
- *
- * @param render Render component to update.
- */
-void updateRender(ComponentRender *render);
-
-//
-////  Physics
-//
-
-/**
- * @brief Initialize physics component.
- *
- * @param physics Physics component to initialize.
- * @param hitbox Initial hitbox.
- */
-void initPhysics(ComponentPhysics *physics, Rectangle hitbox);
-
-/**
- * @brief Update physics component.
- *
- * @param physics Physics component to update.
- */
-void updatePhysics(ComponentPhysics *physics);
-
-//
-////  Systems
-//
-
-/**
- * @brief Initialize transform system.
- *
- * @param system Transform system to initialize.
- */
-void initSystemTransform(SystemTransform *system);
-
-/**
- * @brief Update transform system.
- *
- * @param system Transform system to update.
- * @param game Game state to update.
- */
-void updateSystemTransform(SystemTransform *system, Game *game);
-
-/**
- * @brief Initialize render system.
- *
- * @param system Render system to initialize.
- */
-void initSystemRender(SystemRender *system);
-
-/**
- * @brief Update render system.
- *
- * @param system Render system to update.
- * @param game Game state to update.
- */
-void updateSystemRender(SystemRender *system, Game *game);
-
-/**
- * @brief Initialize physics system.
- *
- * @param system Physics system to initialize.
- */
-void initSystemPhysics(SystemPhysics *system);
-
-/**
- * @brief Update physics system.
- *
- * @param system Physics system to update.
- * @param game Game state to update.
- */
-void updateSystemPhysics(SystemPhysics *system, Game *game);
-
-//
-////  Utils
-//
 
 /**
  * @brief Create a new dynamic array.
@@ -256,7 +35,7 @@ void updateSystemPhysics(SystemPhysics *system, Game *game);
  * @param capacity Initial capacity.
  * @return DynArray* Pointer to the new dynamic array.
  */
-DynArray *newDynArray(size_t capacity);
+DynArray *newDynArray(size_t capacity, size_t elementSize);
 
 /**
  * @brief Destroy a dynamic array.
@@ -270,8 +49,9 @@ void destroyDynArray(DynArray *dynArray);
  *
  * @param dynArray Dynamic array to add to.
  * @param element Element to add.
+ * @return size_t Index of the added element.
  */
-void dynArrayAdd(DynArray *dynArray, void *element);
+size_t dynArrayAdd(DynArray *dynArray, void *element);
 
 /**
  * @brief Remove an element from a dynamic array.
@@ -321,6 +101,21 @@ void *dynArrayLast(DynArray *dynArray);
  * @return void* Pointer to the first element.
  */
 void *dynArrayFirst(DynArray *dynArray);
+
+/**
+ * @brief Clear a dynamic array.
+ *
+ * @param dynArray Pointer to the dynamic array to clear.
+ */
+void dynArrayClear(DynArray *dynArray);
+
+/**
+ * @brief Apply a function to each element of a dynamic array.
+ * 
+ * @param dynArray Dynamic array to apply the function to.
+ * @param foreach Function to apply.
+ */
+void dynArrayForeach(DynArray *dynArray, void (*foreach)(void *element));
 
 /**
  * @brief Filter a dynamic array.
