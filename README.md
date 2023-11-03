@@ -44,9 +44,9 @@ To be implemented soon...
 - [x] Screen wrapping
 
 ### Phase 1.1
-- [ ] Segment program source code into separate files
-- [x] Add shared memory for game state
-- [ ] Separate logic and rendering threads
+- [x] Segment program source code into separate files
+- [ ] Add shared memory for game state (implemented, but not used yet)
+- [x] Separate logic and rendering logic
 - [ ] Headless mode
 - [ ] Thread synchronization
 
