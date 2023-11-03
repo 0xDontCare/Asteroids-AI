@@ -45,9 +45,10 @@ To be implemented soon...
 
 ### Phase 1.1
 - [x] Segment program source code into separate files
-- [ ] Add shared memory for game state (implemented, but not used yet)
+- [x] Add shared memory for game state
 - [x] Separate logic and rendering logic
-- [ ] Headless mode
+- [ ] Headless mode (partially implemented, control over shared input needs testing)
+- [ ] Signal based exiting
 - [ ] Thread synchronization
 
 ### Phase 1.2
