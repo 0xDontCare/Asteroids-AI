@@ -6,15 +6,16 @@ Asteroids-AI is a project that aims to create an artificial intelligence agent t
 
 ## Detailed description
 ### Game
-The game is a classical arcade game where the player controls a spaceship and has to destroy asteroids. The player can move the spaceship in all directions and shoot bullets. The asteroids move in random directions and wrap around the screen edges. When a bullet hits an asteroid, the asteroid is destroyed and the player gets points. When an asteroid hits the spaceship, the spaceship is destroyed and the game is over. For training purposes, the game has shared memory interface that allows the game to be controlled by a neural network agent and has ability to be started in headless mode. The game can be run in two modes:
+The game is a classical arcade game where the player controls a spaceship and has to destroy asteroids. The player can move the spaceship in all directions and shoot bullets. The asteroids move in random directions and wrap around the screen edges. When a bullet hits an asteroid, the asteroid is destroyed and the player gets points. When an asteroid hits the spaceship, the spaceship is destroyed and the game is over. For training purposes, the game has shared memory interface that allows the game to be controlled by a neural network agent and has ability to be started in headless mode. The game can be run in three different modes:
 - Normal mode: The game is controlled by the player (shared memory is disabled)
+- Neural network mode: The game is controlled by a neural network agent (shared memory is enabled and keyboard input is disabled, except for the escape key which exits the game)
 - Training mode: The game is controlled by a neural network agent (shared memory is enabled and keyboard input is disabled, except for the escape key which exits the game)
 
 ### Neural network agent
 To be implemented soon...
 
 ### Management program
-To be implemented soon...
+Management program is currently responsible for creating shared memory between game and external programs as well as starting instance of a game. Once game stops running, it will free shared memory from the system.
 
 ## Installation
 ### Linux
