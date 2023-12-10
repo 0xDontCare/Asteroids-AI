@@ -1,6 +1,6 @@
 /**
  * @file asteroidsObjects.h
- * @author 0xDontCare (you@domain.com)
+ * @author 0xDontCare (https://github.com/0xDontCare)
  * @brief Game object structures required for asteroids game.
  * @version 0.1
  * @date 21.10.2023.

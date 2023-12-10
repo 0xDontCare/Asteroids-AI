@@ -1,3 +1,14 @@
+/**
+ * @file asteroidsShared.c
+ * @author 0xDontCare (https://github.com/0xDontCare)
+ * @brief Implementations of functions declared in `asteroidsShared.h` header.
+ * @version 0.2
+ * @date 12.11.2023.
+ * 
+ * @copyright Copyright (c) 2023
+ * 
+ */
+
 #include "asteroidsShared.h"
 
 #include <fcntl.h>

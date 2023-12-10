@@ -1,8 +1,14 @@
-#include <pthread.h>
-#include <raylib.h>
-#include <raymath.h>
-#include <stdio.h>
-#include <time.h>
+/**
+ * @file programGame.c
+ * @author 0xDontCare (https://github.com/0xDontCare)
+ * @brief Main game program. Depending on how it is started, it can take input from keyboard or from external programs in shared memory.
+ * @version 0.2
+ * @date 07.11.2023.
+ *
+ * @copyright Copyright (c) 2023
+ *
+ */
+
 
 #include "asteroidsObjects.h"
 #include "asteroidsShared.h"
