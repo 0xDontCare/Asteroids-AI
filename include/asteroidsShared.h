@@ -2,10 +2,13 @@
  * @file asteroidsShared.h
  * @author 0xDontCare (https://github.com/0xDontCare)
  * @brief Shared memory structures and functions for external interaction with Asteroids game.
- * @version 0.1
- * @date 31.10.2023.
+ * @version 0.2
+ * @date 12.11.2023.
  *
  * @copyright Copyright (c) 2023
+ *
+ * Module declares structures and functions used for sharing data between game, manager and neural network programs.
+ * All functions have prefix `as_`.
  *
  */
 
@@ -38,19 +41,182 @@ struct sharedOutput_s {
     float closestAsteroidPosY;
 };
 
-struct sharedInput_s *allocateSharedInput(const char *sharedMemoryName);
-void initSharedInput(struct sharedInput_s *sharedInput);
-void destroySharedInput(struct sharedInput_s *sharedInput);
-void unloadSharedInput(struct sharedInput_s *sharedInput);
-void lockSharedInput(struct sharedInput_s *sharedInput);
-void unlockSharedInput(struct sharedInput_s *sharedInput);
+struct sharedState_s {
+    pthread_mutex_t mutex;  // access mutex for shared state
 
-struct sharedOutput_s *allocateSharedOutput(const char *sharedMemoryName);
-void initSharedOutput(struct sharedOutput_s *sharedOutput);
-void destroySharedOutput(struct sharedOutput_s *sharedOutput);
-void unloadSharedOutput(struct sharedOutput_s *sharedOutput);
-void lockSharedOutput(struct sharedOutput_s *sharedOutput);
-void unlockSharedOutput(struct sharedOutput_s *sharedOutput);
+    int state_gameAlive;     // status if game program is running (activated by game on start)
+    int state_managerAlive;  // status if manager program is running (activated by manager on start)
+    int state_neuronsAlive;  // status if neural network program is running (activated by NN program on start)
+
+    int game_isPaused;     // status if game is paused (modified by game)
+    int game_runHeadless;  // status if game is running headless (modified by manager)
+    int game_gameScore;    // current game score (modified by game)
+    int game_gameLevel;    // current game level (modified by game)
+    double game_gameTime;  // current game time  (modified by game)
+};
+
+/**
+ * @brief Allocate or connect to shared memory for input.
+ *
+ * @param sharedMemoryName Name of shared memory to allocate or connect to.
+ * @return Pointer to shared memory structure.
+ */
+struct sharedInput_s *as_allocateSharedInput(const char *sharedMemoryName);
+
+/**
+ * @brief Connect to already existing shared memory with given key string.
+ *
+ * @note This function tries to connect to already existing shared memory. It will not create it if it doesn't exist.
+ *
+ * @param sharedMemoryName Pointer to C string containing shared memory key
+ * @return Pointer to shared memory structure if success, NULL if fail
+ */
+struct sharedInput_s *as_connectSharedInput(const char *sharedMemoryName);
+
+/**
+ * @brief Initialize shared memory structure to default values.
+ *
+ * @param sharedInput Pointer to shared memory structure.
+ */
+void as_initSharedInput(struct sharedInput_s *sharedInput);
+
+/**
+ * @brief Destroy shared memory structure.
+ *
+ * @warning This function destroys shared memory for all processes using it.
+ *
+ * @param sharedInput Pointer to shared memory structure.
+ * @param sharedMemoryName Name of shared memory to destroy.
+ */
+void as_freeSharedInput(struct sharedInput_s *sharedInput, const char *sharedMemoryName);
+
+/**
+ * @brief Unload shared memory structure.
+ *
+ * @note This function only unloads shared memory for current process. Other processes using it will not be affected.
+ *
+ * @param sharedInput Pointer to shared memory structure.
+ */
+void as_disconnectSharedInput(struct sharedInput_s *sharedInput);
+
+/**
+ * @brief Lock shared memory structure.
+ *
+ * @note Should be used before performing any actions on shared memory structure.
+ *
+ * @warning Make sure to unlock shared memory structure after performing any actions on it to avoid deadlocks.
+ *
+ * @param sharedInput Pointer to shared memory structure.
+ */
+void as_lockSharedInput(struct sharedInput_s *sharedInput);
+
+/**
+ * @brief Unlock shared memory structure.
+ *
+ * @note Should be used after locking shared memory structure.
+ *
+ * @param sharedInput Pointer to shared memory structure.
+ */
+void as_unlockSharedInput(struct sharedInput_s *sharedInput);
+
+/**
+ * @brief Allocate or connect to shared memory for output.
+ *
+ * @param sharedMemoryName Name of shared memory to allocate or connect to.
+ * @return Pointer to shared memory structure.
+ */
+struct sharedOutput_s *as_allocateSharedOutput(const char *sharedMemoryName);
+
+/**
+ * @brief Connect to existing shared output structure.
+ *
+ * @param sharedMemoryName Shared memory access string.
+ * @return Pointer to shared output structure.
+ */
+struct sharedOutput_s *as_connectSharedOutput(const char *sharedMemoryName);
+
+/**
+ * @brief Initialize shared memory structure to default values
+ *
+ * @param sharedOutput Pointer to shared memory structure.
+ */
+void as_initSharedOutput(struct sharedOutput_s *sharedOutput);
+
+/**
+ * @brief Destroy shared memory structure
+ *
+ * @param sharedOutput Pointer to shared memory.
+ * @param sharedMemoryName Shared memory access string.
+ */
+void as_freeSharedOutput(struct sharedOutput_s *sharedOutput, const char *sharedMemoryName);
+
+/**
+ * @brief Unload shared memory from current program.
+ *
+ * @param sharedOutput Pointer to shared memory structure.
+ */
+void as_disconnectSharedOutput(struct sharedOutput_s *sharedOutput);
+
+/**
+ * @brief Lock shared memory structure.
+ *
+ * @note Should be used before performing any actions on shared memory.
+ *
+ * @param sharedOutput Pointer to shared memory structure.
+ */
+void as_lockSharedOutput(struct sharedOutput_s *sharedOutput);
+
+/**
+ * @brief Unlock access to shared memory structure.
+ *
+ * @param sharedOutput Pointer to shared memory structure.
+ */
+void as_unlockSharedOutput(struct sharedOutput_s *sharedOutput);
+
+/**
+ * @brief Allocate or connect to shared memory for shared state.
+ *
+ * @param sharedMemoryName Name of shared memory to allocate or connect to.
+ * @return Pointer to shared memory structure.
+ */
+struct sharedState_s *as_allocateSharedState(const char *sharedMemoryName);
+
+/**
+ * @brief Connect to existing shared state structure.
+ *
+ * @param sharedMemoryName Shared memory access string.
+ * @return Pointer to shared state structure.
+ */
+struct sharedState_s *as_connectSharedState(const char *sharedMemoryName);
+
+/**
+ * @brief Destroy shared memory structure.
+ *
+ * @param sharedState Pointer to shared memory structure.
+ * @param sharedMemoryName Shared memory access string.
+ */
+void as_freeSharedState(struct sharedState_s *sharedState, const char *sharedMemoryName);
+
+/**
+ * @brief Unload shared memory from current program.
+ *
+ * @param sharedState Pointer to shared memory structure.
+ */
+void as_disconnectSharedState(struct sharedState_s *sharedState);
+
+/**
+ * @brief Lock shared memory structure.
+ *
+ * @param sharedState Pointer to shared memory structure.
+ */
+void as_lockSharedState(struct sharedState_s *sharedState);
+
+/**
+ * @brief Unlock access to shared memory structure.
+ *
+ * @param sharedState Pointer to shared memory structure.
+ */
+void as_unlockSharedState(struct sharedState_s *sharedState);
 
 #ifdef __cplusplus
 }
