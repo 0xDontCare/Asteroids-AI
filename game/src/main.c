@@ -230,7 +230,7 @@ int main(int argc, char *argv[]) {
         sharedState->game_gameLevel = 1;
         sharedState->game_gameScore = 0;
         sharedState->game_gameTime = 0.0;
-        sharedState->game_runHeadless = run_headless;
+        sharedState->game_runHeadless = (cmd_flags & 0x08) != 0;
         as_unlockSharedState(sharedState);
 
         // update shared output
@@ -244,7 +244,7 @@ int main(int argc, char *argv[]) {
     }
 
     // create window and unlock maximum framerate (which will be regulated by other means)
-    if (!run_headless) {
+    if (!(cmd_flags & 0x08)) {
         InitWindow(windowWidth, windowHeight, windowName);
         SetTargetFPS(0);
         run_windowActive = 1;
@@ -279,7 +279,7 @@ int main(int argc, char *argv[]) {
         // delta-time loop
         while (accumulator >= fixedTimeStep) {
             // update input control variables depending on run mode
-            if (run_headless && !run_windowActive) {
+            if ((cmd_flags & 0x08) && !run_windowActive) {
                 as_lockSharedInput(sharedInput);
                 input_forward = sharedInput->isKeyDownW;
                 input_left = sharedInput->isKeyDownA;
@@ -294,7 +294,7 @@ int main(int argc, char *argv[]) {
             }
 
             // input-based component updates
-            if (IsKeyDown(KEY_H)) run_headless = 1;
+            if (IsKeyDown(KEY_H)) cmd_flags |= 0x08;
             if (input_forward) {
                 float rotation = ((ComponentRotation *)dynArrayGet(RotationComponents, player->rotationID))->rotation;
                 Vector2 acceleration = Vector2Scale((Vector2){cosf(rotation), sinf(rotation)}, base_playerAcceleration);
@@ -312,10 +312,10 @@ int main(int argc, char *argv[]) {
                 ((ComponentRotation *)dynArrayGet(RotationComponents, player->rotationID))->rotationSpeed = 0.f;
 
             // headless mode update
-            if (run_headless && run_windowActive) {
+            if ((cmd_flags & 0x08) && run_windowActive) {
                 CloseWindow();
                 run_windowActive = 0;
-            } else if (!run_headless && !run_windowActive) {
+            } else if (!(cmd_flags & 0x08) && !run_windowActive) {
                 InitWindow(windowWidth, windowHeight, windowName);
                 SetTargetFPS(0);
                 run_windowActive = 1;
