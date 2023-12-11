@@ -1,9 +1,9 @@
 /**
- * @file asteroidsStructures.h
+ * @file dynArray.h
  * @author 0xDontCare (https://github.com/0xDontCare)
- * @brief Various data strucutres used for game implementation.
+ * @brief Dynamic array and functions.
  * @version 0.1
- * @date 31.10.2023.
+ * @date 11.12.2023.
  *
  * @copyright Copyright (c) 2023
  *

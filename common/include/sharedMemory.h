@@ -1,14 +1,14 @@
 /**
- * @file asteroidsShared.h
+ * @file sharedMemory.h
  * @author 0xDontCare (https://github.com/0xDontCare)
- * @brief Shared memory structures and functions for external interaction with Asteroids game.
+ * @brief Shared memory structures and functions for interprocess communication between game, manager and neural network programs.
  * @version 0.2
- * @date 12.11.2023.
+ * @date 11.12.2023.
  *
  * @copyright Copyright (c) 2023
  *
  * Module declares structures and functions used for sharing data between game, manager and neural network programs.
- * All functions have prefix `as_`.
+ * All functions have prefix `sm_`.
  *
  */
 
@@ -61,7 +61,7 @@ struct sharedState_s {
  * @param sharedMemoryName Name of shared memory to allocate or connect to.
  * @return Pointer to shared memory structure.
  */
-struct sharedInput_s *as_allocateSharedInput(const char *sharedMemoryName);
+struct sharedInput_s *sm_allocateSharedInput(const char *sharedMemoryName);
 
 /**
  * @brief Connect to already existing shared memory with given key string.
@@ -71,14 +71,14 @@ struct sharedInput_s *as_allocateSharedInput(const char *sharedMemoryName);
  * @param sharedMemoryName Pointer to C string containing shared memory key
  * @return Pointer to shared memory structure if success, NULL if fail
  */
-struct sharedInput_s *as_connectSharedInput(const char *sharedMemoryName);
+struct sharedInput_s *sm_connectSharedInput(const char *sharedMemoryName);
 
 /**
  * @brief Initialize shared memory structure to default values.
  *
  * @param sharedInput Pointer to shared memory structure.
  */
-void as_initSharedInput(struct sharedInput_s *sharedInput);
+void sm_initSharedInput(struct sharedInput_s *sharedInput);
 
 /**
  * @brief Destroy shared memory structure.
@@ -88,7 +88,7 @@ void as_initSharedInput(struct sharedInput_s *sharedInput);
  * @param sharedInput Pointer to shared memory structure.
  * @param sharedMemoryName Name of shared memory to destroy.
  */
-void as_freeSharedInput(struct sharedInput_s *sharedInput, const char *sharedMemoryName);
+void sm_freeSharedInput(struct sharedInput_s *sharedInput, const char *sharedMemoryName);
 
 /**
  * @brief Unload shared memory structure.
@@ -97,7 +97,7 @@ void as_freeSharedInput(struct sharedInput_s *sharedInput, const char *sharedMem
  *
  * @param sharedInput Pointer to shared memory structure.
  */
-void as_disconnectSharedInput(struct sharedInput_s *sharedInput);
+void sm_disconnectSharedInput(struct sharedInput_s *sharedInput);
 
 /**
  * @brief Lock shared memory structure.
@@ -108,7 +108,7 @@ void as_disconnectSharedInput(struct sharedInput_s *sharedInput);
  *
  * @param sharedInput Pointer to shared memory structure.
  */
-void as_lockSharedInput(struct sharedInput_s *sharedInput);
+void sm_lockSharedInput(struct sharedInput_s *sharedInput);
 
 /**
  * @brief Unlock shared memory structure.
@@ -117,7 +117,7 @@ void as_lockSharedInput(struct sharedInput_s *sharedInput);
  *
  * @param sharedInput Pointer to shared memory structure.
  */
-void as_unlockSharedInput(struct sharedInput_s *sharedInput);
+void sm_unlockSharedInput(struct sharedInput_s *sharedInput);
 
 /**
  * @brief Allocate or connect to shared memory for output.
@@ -125,7 +125,7 @@ void as_unlockSharedInput(struct sharedInput_s *sharedInput);
  * @param sharedMemoryName Name of shared memory to allocate or connect to.
  * @return Pointer to shared memory structure.
  */
-struct sharedOutput_s *as_allocateSharedOutput(const char *sharedMemoryName);
+struct sharedOutput_s *sm_allocateSharedOutput(const char *sharedMemoryName);
 
 /**
  * @brief Connect to existing shared output structure.
@@ -133,14 +133,14 @@ struct sharedOutput_s *as_allocateSharedOutput(const char *sharedMemoryName);
  * @param sharedMemoryName Shared memory access string.
  * @return Pointer to shared output structure.
  */
-struct sharedOutput_s *as_connectSharedOutput(const char *sharedMemoryName);
+struct sharedOutput_s *sm_connectSharedOutput(const char *sharedMemoryName);
 
 /**
  * @brief Initialize shared memory structure to default values
  *
  * @param sharedOutput Pointer to shared memory structure.
  */
-void as_initSharedOutput(struct sharedOutput_s *sharedOutput);
+void sm_initSharedOutput(struct sharedOutput_s *sharedOutput);
 
 /**
  * @brief Destroy shared memory structure
@@ -148,14 +148,14 @@ void as_initSharedOutput(struct sharedOutput_s *sharedOutput);
  * @param sharedOutput Pointer to shared memory.
  * @param sharedMemoryName Shared memory access string.
  */
-void as_freeSharedOutput(struct sharedOutput_s *sharedOutput, const char *sharedMemoryName);
+void sm_freeSharedOutput(struct sharedOutput_s *sharedOutput, const char *sharedMemoryName);
 
 /**
  * @brief Unload shared memory from current program.
  *
  * @param sharedOutput Pointer to shared memory structure.
  */
-void as_disconnectSharedOutput(struct sharedOutput_s *sharedOutput);
+void sm_disconnectSharedOutput(struct sharedOutput_s *sharedOutput);
 
 /**
  * @brief Lock shared memory structure.
@@ -164,14 +164,14 @@ void as_disconnectSharedOutput(struct sharedOutput_s *sharedOutput);
  *
  * @param sharedOutput Pointer to shared memory structure.
  */
-void as_lockSharedOutput(struct sharedOutput_s *sharedOutput);
+void sm_lockSharedOutput(struct sharedOutput_s *sharedOutput);
 
 /**
  * @brief Unlock access to shared memory structure.
  *
  * @param sharedOutput Pointer to shared memory structure.
  */
-void as_unlockSharedOutput(struct sharedOutput_s *sharedOutput);
+void sm_unlockSharedOutput(struct sharedOutput_s *sharedOutput);
 
 /**
  * @brief Allocate or connect to shared memory for shared state.
@@ -179,7 +179,7 @@ void as_unlockSharedOutput(struct sharedOutput_s *sharedOutput);
  * @param sharedMemoryName Name of shared memory to allocate or connect to.
  * @return Pointer to shared memory structure.
  */
-struct sharedState_s *as_allocateSharedState(const char *sharedMemoryName);
+struct sharedState_s *sm_allocateSharedState(const char *sharedMemoryName);
 
 /**
  * @brief Connect to existing shared state structure.
@@ -187,7 +187,7 @@ struct sharedState_s *as_allocateSharedState(const char *sharedMemoryName);
  * @param sharedMemoryName Shared memory access string.
  * @return Pointer to shared state structure.
  */
-struct sharedState_s *as_connectSharedState(const char *sharedMemoryName);
+struct sharedState_s *sm_connectSharedState(const char *sharedMemoryName);
 
 /**
  * @brief Destroy shared memory structure.
@@ -195,28 +195,28 @@ struct sharedState_s *as_connectSharedState(const char *sharedMemoryName);
  * @param sharedState Pointer to shared memory structure.
  * @param sharedMemoryName Shared memory access string.
  */
-void as_freeSharedState(struct sharedState_s *sharedState, const char *sharedMemoryName);
+void sm_freeSharedState(struct sharedState_s *sharedState, const char *sharedMemoryName);
 
 /**
  * @brief Unload shared memory from current program.
  *
  * @param sharedState Pointer to shared memory structure.
  */
-void as_disconnectSharedState(struct sharedState_s *sharedState);
+void sm_disconnectSharedState(struct sharedState_s *sharedState);
 
 /**
  * @brief Lock shared memory structure.
  *
  * @param sharedState Pointer to shared memory structure.
  */
-void as_lockSharedState(struct sharedState_s *sharedState);
+void sm_lockSharedState(struct sharedState_s *sharedState);
 
 /**
  * @brief Unlock access to shared memory structure.
  *
  * @param sharedState Pointer to shared memory structure.
  */
-void as_unlockSharedState(struct sharedState_s *sharedState);
+void sm_unlockSharedState(struct sharedState_s *sharedState);
 
 #ifdef __cplusplus
 }

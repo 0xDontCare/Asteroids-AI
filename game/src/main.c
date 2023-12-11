@@ -3,7 +3,7 @@
  * @author 0xDontCare (https://github.com/0xDontCare)
  * @brief Main game program. Depending on how it is started, it can take input from keyboard or from external programs in shared memory.
  * @version 0.2
- * @date 07.11.2023.
+ * @date 11.12.2023.
  *
  * @copyright Copyright (c) 2023
  *
@@ -14,11 +14,11 @@
 #include <stdio.h>    // standard input/output library
 #include <time.h>     // time library
 
-#include "asteroidsObjects.h"     // game entities and components
-#include "asteroidsShared.h"      // shared memory interfaces and functions
-#include "asteroidsStructures.h"  // general data structures
-#include "commonUtility.h"        // smaller common utility functions which don't have much to do with the game itself
-#include "xString.h"              // string library
+#include "commonUtility.h"  // smaller common utility functions which don't have much to do with the game itself
+#include "dynArray.h"       // dynamic array structure and functions
+#include "ecsObjects.h"     // game entities and components
+#include "sharedMemory.h"   // shared memory interfaces and functions
+#include "xString.h"        // string library
 
 // TODO: replace asteroidsStructures.h with modules from xcFramework (since xString.h is already used)
 
@@ -197,50 +197,50 @@ int main(int argc, char *argv[]) {
     // if game is running standalone and without neural network, sharing memory is not needed
     if (cmd_flags & 0x04 && cmd_flags & 0x10) {
         // create shared input and output
-        sharedInput = as_allocateSharedInput(cmd_shInputName);
-        sharedOutput = as_allocateSharedOutput(cmd_shOutputName);
+        sharedInput = sm_allocateSharedInput(cmd_shInputName);
+        sharedOutput = sm_allocateSharedOutput(cmd_shOutputName);
 
         // initialize shared input and output
-        as_lockSharedInput(sharedInput);
-        as_initSharedInput(sharedInput);
-        as_unlockSharedInput(sharedInput);
-        as_lockSharedOutput(sharedOutput);
-        as_initSharedOutput(sharedOutput);
-        as_unlockSharedOutput(sharedOutput);
+        sm_lockSharedInput(sharedInput);
+        sm_initSharedInput(sharedInput);
+        sm_unlockSharedInput(sharedInput);
+        sm_lockSharedOutput(sharedOutput);
+        sm_initSharedOutput(sharedOutput);
+        sm_unlockSharedOutput(sharedOutput);
 
         // update shared output
-        as_lockSharedOutput(sharedOutput);
+        sm_lockSharedOutput(sharedOutput);
         sharedOutput->playerPosX = ((ComponentMotion *)dynArrayGet(MotionComponents, player->movementID))->position.x;
         sharedOutput->playerPosY = ((ComponentMotion *)dynArrayGet(MotionComponents, player->movementID))->position.y;
         sharedOutput->playerRotation = ((ComponentRotation *)dynArrayGet(RotationComponents, player->rotationID))->rotation;
         sharedOutput->playerSpeedX = ((ComponentMotion *)dynArrayGet(MotionComponents, player->movementID))->velocity.x;
         sharedOutput->playerSpeedY = ((ComponentMotion *)dynArrayGet(MotionComponents, player->movementID))->velocity.y;
-        as_unlockSharedOutput(sharedOutput);
+        sm_unlockSharedOutput(sharedOutput);
     }
     // else if in managed mode, connect to shared memory and set own values
     else if (cmd_flags & 0x20) {
         // connect to shared memory locations
-        sharedInput = as_connectSharedInput(cmd_shInputName);
-        sharedOutput = as_connectSharedOutput(cmd_shOutputName);
-        sharedState = as_connectSharedState(cmd_shStateName);
+        sharedInput = sm_connectSharedInput(cmd_shInputName);
+        sharedOutput = sm_connectSharedOutput(cmd_shOutputName);
+        sharedState = sm_connectSharedState(cmd_shStateName);
 
         // set own values to shared state
-        as_lockSharedState(sharedState);
+        sm_lockSharedState(sharedState);
         sharedState->state_gameAlive = 1;
         sharedState->game_gameLevel = 1;
         sharedState->game_gameScore = 0;
         sharedState->game_gameTime = 0.0;
         sharedState->game_runHeadless = (cmd_flags & 0x08) != 0;
-        as_unlockSharedState(sharedState);
+        sm_unlockSharedState(sharedState);
 
         // update shared output
-        as_lockSharedOutput(sharedOutput);
+        sm_lockSharedOutput(sharedOutput);
         sharedOutput->playerPosX = ((ComponentMotion *)dynArrayGet(MotionComponents, player->movementID))->position.x;
         sharedOutput->playerPosY = ((ComponentMotion *)dynArrayGet(MotionComponents, player->movementID))->position.y;
         sharedOutput->playerRotation = ((ComponentRotation *)dynArrayGet(RotationComponents, player->rotationID))->rotation;
         sharedOutput->playerSpeedX = ((ComponentMotion *)dynArrayGet(MotionComponents, player->movementID))->velocity.x;
         sharedOutput->playerSpeedY = ((ComponentMotion *)dynArrayGet(MotionComponents, player->movementID))->velocity.y;
-        as_unlockSharedOutput(sharedOutput);
+        sm_unlockSharedOutput(sharedOutput);
     }
 
     // create window and unlock maximum framerate (which will be regulated by other means)
@@ -280,12 +280,12 @@ int main(int argc, char *argv[]) {
         while (accumulator >= fixedTimeStep) {
             // update input control variables depending on run mode
             if ((cmd_flags & 0x08) && !run_windowActive) {
-                as_lockSharedInput(sharedInput);
+                sm_lockSharedInput(sharedInput);
                 input_forward = sharedInput->isKeyDownW;
                 input_left = sharedInput->isKeyDownA;
                 input_right = sharedInput->isKeyDownD;
                 input_shoot = sharedInput->isKeyDownSpace;
-                as_unlockSharedInput(sharedInput);
+                sm_unlockSharedInput(sharedInput);
             } else if (run_windowActive) {
                 input_forward = IsKeyDown(KEY_W);
                 input_left = IsKeyDown(KEY_A);
@@ -377,13 +377,13 @@ int main(int argc, char *argv[]) {
         // post-rendering logic (free resources, etc.)
 
         // update shared outputs
-        as_lockSharedOutput(sharedOutput);
+        sm_lockSharedOutput(sharedOutput);
         sharedOutput->playerPosX = ((ComponentMotion *)dynArrayGet(MotionComponents, player->movementID))->position.x;
         sharedOutput->playerPosY = ((ComponentMotion *)dynArrayGet(MotionComponents, player->movementID))->position.y;
         sharedOutput->playerRotation = ((ComponentRotation *)dynArrayGet(RotationComponents, player->rotationID))->rotation;
         sharedOutput->playerSpeedX = ((ComponentMotion *)dynArrayGet(MotionComponents, player->movementID))->velocity.x;
         sharedOutput->playerSpeedY = ((ComponentMotion *)dynArrayGet(MotionComponents, player->movementID))->velocity.y;
-        as_unlockSharedOutput(sharedOutput);
+        sm_unlockSharedOutput(sharedOutput);
     }
 
     if (run_windowActive) {
@@ -392,8 +392,8 @@ int main(int argc, char *argv[]) {
     }
 
     // close shared memory
-    as_freeSharedInput(sharedInput, "sharedInput");
-    as_freeSharedOutput(sharedOutput, "sharedOutput");
+    sm_freeSharedInput(sharedInput, "sharedInput");
+    sm_freeSharedOutput(sharedOutput, "sharedOutput");
 
     // free all allocated memory
     MemFree(player);

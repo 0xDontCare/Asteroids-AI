@@ -9,7 +9,7 @@
  *
  */
 
-#include "asteroidsObjects.h"
+#include "ecsObjects.h"
 
 #include <raylib.h>
 #include <raymath.h>

@@ -1,4 +1,15 @@
-#include "asteroidsStructures.h"
+/**
+ * @file dynArray.c
+ * @author 0xDontCare (https://github.com/0xDontCare)
+ * @brief Implementations of array functions declared in dynArray.h
+ * @version 0.1
+ * @date 11.12.2023.
+ * 
+ * @copyright Copyright (c) 2023
+ * 
+ */
+
+#include "dynArray.h"
 
 #include <stdlib.h>
 

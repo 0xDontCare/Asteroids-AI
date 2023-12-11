@@ -1125,7 +1125,7 @@ xString *xString_fromCString(char *cstr);
 
 /**
  * @brief Check if xString object and data block are equal.
- * 
+ *
  * @param str Pointer to xString object.
  * @param data Pointer to data block.
  * @param len Data block size.
@@ -1135,7 +1135,7 @@ int xString_isEqual(xString *str, unsigned char *data, int len);
 
 /**
  * @brief Check if two xString objects are equal.
- * 
+ *
  * @param str Pointer to xString object.
  * @param str2 Pointer to another xString object.
  * @return 1 if strings are equal, 0 otherwise.
@@ -1144,7 +1144,7 @@ int xString_isEqualString(xString *str, xString *str2);
 
 /**
  * @brief Check if xString object and C string are equal.
- * 
+ *
  * @param str Pointer to xString object.
  * @param cstr Pointer to C string.
  * @return 1 if strings are equal, 0 otherwise.
