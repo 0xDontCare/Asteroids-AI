@@ -18,20 +18,15 @@
 #include <time.h>     // time library
 
 #include "commonUtility.h"  // smaller common utility functions which don't have much to do with the game itself
-#include "dynArray.h"       // dynamic array structure and functions
 #include "ecsObjects.h"     // game entities and components
 #include "sharedMemory.h"   // shared memory interfaces and functions
+#include "xArray.h"         // dynamic array library
 #include "xString.h"        // string library
-
-// TODO: replace asteroidsStructures.h with modules from xcFramework (since xString.h is already used)
 
 // constant game globals
 const int windowWidth = 1024;
 const int windowHeight = 768;
 const char *windowName = "Asteroids";
-
-// function declarations
-void InitAsteroid(AsteroidObject *asteroid, DynArray *motionComponents, DynArray *rotationComponents, DynArray *circleComponents);
 
 // game entry point
 int main(int argc, char *argv[]) {
@@ -135,8 +130,6 @@ int main(int argc, char *argv[]) {
         }
     }
     // TODO: apply new command line arguments to the rest of the program
-    // printf("Starting game...\n");
-    // return 0;
 
     // game input flags
     unsigned short flags_input = INPUT_NONE;
@@ -144,40 +137,61 @@ int main(int argc, char *argv[]) {
     // game constants
     const float base_playerAcceleration = 500.f;
 
-    // creating a dynamic arrays to store components
-    DynArray *MotionComponents = newDynArray(10, sizeof(ComponentMotion));
-    DynArray *RotationComponents = newDynArray(10, sizeof(ComponentRotation));
-    DynArray *RectComponents = newDynArray(10, sizeof(ComponentCollisionRect));
-    DynArray *CircleComponents = newDynArray(10, sizeof(ComponentCollisionCircle));
-    // DynArray *LifetimeComponents = newDynArray(10, sizeof(ComponentLifeTime));
-    // printf("Allocated component arrays...\n");
+    // entity-component arrays
+    xArray *motionComponents = xArray_new();
+    xArray *rotationComponents = xArray_new();
+    xArray *rectComponents = xArray_new();
+    xArray *circleComponents = xArray_new();
+    // xArray *lifetimeComponents = xArray_new();
 
-    // allocating player components and adding them to the components array
+    // allocating player components and adding them to arrays
     PlayerObject *player = (PlayerObject *)malloc(sizeof(PlayerObject));
-    player->movementID = dynArrayAdd(MotionComponents, malloc(sizeof(ComponentMotion)));
-    player->rotationID = dynArrayAdd(RotationComponents, malloc(sizeof(ComponentRotation)));
-    player->hitboxID = dynArrayAdd(RectComponents, malloc(sizeof(ComponentCollisionRect)));
-    // printf("Player allocated...\n");
+    xArray_push(motionComponents, malloc(sizeof(ComponentMotion)));
+    xArray_push(rotationComponents, malloc(sizeof(ComponentRotation)));
+    xArray_push(rectComponents, malloc(sizeof(ComponentCollisionRect)));
+    player->movementID = motionComponents->size - 1;
+    player->rotationID = rotationComponents->size - 1;
+    player->hitboxID = rectComponents->size - 1;
 
     // allocating asteroid components and adding them to the components array
-    DynArray *AsteroidArray = newDynArray(10, sizeof(AsteroidObject));
+    xArray *asteroidArray = xArray_new();
     for (size_t i = 0; i < 10; i++) {
         AsteroidObject *tmpAsteroid = (AsteroidObject *)malloc(sizeof(AsteroidObject));
-        dynArrayAdd(AsteroidArray, tmpAsteroid);
+        ComponentMotion *astMotion = (ComponentMotion *)malloc(sizeof(ComponentMotion));
+        ComponentRotation *astRotation = (ComponentRotation *)malloc(sizeof(ComponentRotation));
+        ComponentCollisionCircle *astCollision = (ComponentCollisionCircle *)malloc(sizeof(ComponentCollisionCircle));
 
-        // printf("Initializing asteroid %zu...\n", i);
-        InitAsteroid(tmpAsteroid, MotionComponents, RotationComponents, CircleComponents);
+        if (tmpAsteroid == NULL || astMotion == NULL || astRotation == NULL || astCollision == NULL) {
+            free(tmpAsteroid);
+            free(astMotion);
+            free(astRotation);
+            free(astCollision);
+            break;
+        }
+
+        astMotion->position = (Vector2){GetRandomValue(0, windowWidth), GetRandomValue(0, windowHeight)};
+        astMotion->velocity = (Vector2){GetRandomValue(-100, 100), GetRandomValue(-100, 100)};
+        astMotion->acceleration = (Vector2){0, 0};
+        astRotation->rotation = GetRandomValue(-3, 3);
+        astRotation->rotationSpeed = GetRandomValue(-10, 10);
+        astCollision->radius = GetRandomValue(1, 3) * 10.f;
+
+        xArray_push(motionComponents, astMotion);
+        xArray_push(rotationComponents, astRotation);
+        xArray_push(circleComponents, astCollision);
+        tmpAsteroid->movementID = motionComponents->size - 1;
+        tmpAsteroid->rotationID = rotationComponents->size - 1;
+        tmpAsteroid->hitboxID = circleComponents->size - 1;
+        xArray_push(asteroidArray, tmpAsteroid);
     }
-    // printf("Asteroids initialized...\n");
 
     // initializing player components
-    ((ComponentMotion *)dynArrayGet(MotionComponents, player->movementID))->position = (Vector2){windowWidth / 2, windowHeight / 2};
-    ((ComponentMotion *)dynArrayGet(MotionComponents, player->movementID))->velocity = (Vector2){0, 0};
-    ((ComponentMotion *)dynArrayGet(MotionComponents, player->movementID))->acceleration = (Vector2){0, 0};
-    ((ComponentRotation *)dynArrayGet(RotationComponents, player->rotationID))->rotation = 0;
-    ((ComponentRotation *)dynArrayGet(RotationComponents, player->rotationID))->rotationSpeed = 0;
-    ((ComponentCollisionRect *)dynArrayGet(RectComponents, player->hitboxID))->hitbox = (Vector2){50, 50};
-    // printf("Player initialized...\n");
+    ((ComponentMotion *)xArray_get(motionComponents, player->movementID))->position = (Vector2){windowWidth / 2, windowHeight / 2};
+    ((ComponentMotion *)xArray_get(motionComponents, player->movementID))->velocity = (Vector2){0, 0};
+    ((ComponentMotion *)xArray_get(motionComponents, player->movementID))->acceleration = (Vector2){0, 0};
+    ((ComponentRotation *)xArray_get(rotationComponents, player->rotationID))->rotation = 0;
+    ((ComponentRotation *)xArray_get(rotationComponents, player->rotationID))->rotationSpeed = 0;
+    ((ComponentCollisionRect *)xArray_get(rectComponents, player->hitboxID))->hitbox = (Vector2){50, 50};
 
     // TODO: depending on run mode, allocate, connect to or skip creating shared memory
     struct sharedInput_s *sharedInput = NULL;
@@ -197,11 +211,16 @@ int main(int argc, char *argv[]) {
 
         sm_lockSharedOutput(sharedOutput);
         sm_initSharedOutput(sharedOutput);
-        sharedOutput->playerPosX = ((ComponentMotion *)dynArrayGet(MotionComponents, player->movementID))->position.x;
-        sharedOutput->playerPosY = ((ComponentMotion *)dynArrayGet(MotionComponents, player->movementID))->position.y;
-        sharedOutput->playerRotation = ((ComponentRotation *)dynArrayGet(RotationComponents, player->rotationID))->rotation;
-        sharedOutput->playerSpeedX = ((ComponentMotion *)dynArrayGet(MotionComponents, player->movementID))->velocity.x;
-        sharedOutput->playerSpeedY = ((ComponentMotion *)dynArrayGet(MotionComponents, player->movementID))->velocity.y;
+        // sharedOutput->playerPosX = ((ComponentMotion *)dynArrayGet(MotionComponents, player->movementID))->position.x;
+        // sharedOutput->playerPosY = ((ComponentMotion *)dynArrayGet(MotionComponents, player->movementID))->position.y;
+        // sharedOutput->playerRotation = ((ComponentRotation *)dynArrayGet(RotationComponents, player->rotationID))->rotation;
+        // sharedOutput->playerSpeedX = ((ComponentMotion *)dynArrayGet(MotionComponents, player->movementID))->velocity.x;
+        // sharedOutput->playerSpeedY = ((ComponentMotion *)dynArrayGet(MotionComponents, player->movementID))->velocity.y;
+        sharedOutput->playerPosX = ((ComponentMotion *)xArray_get(motionComponents, player->movementID))->position.x;
+        sharedOutput->playerPosY = ((ComponentMotion *)xArray_get(motionComponents, player->movementID))->position.y;
+        sharedOutput->playerRotation = ((ComponentRotation *)xArray_get(rotationComponents, player->rotationID))->rotation;
+        sharedOutput->playerSpeedX = ((ComponentMotion *)xArray_get(motionComponents, player->movementID))->velocity.x;
+        sharedOutput->playerSpeedY = ((ComponentMotion *)xArray_get(motionComponents, player->movementID))->velocity.y;
         sm_unlockSharedOutput(sharedOutput);
 
         // printf("Shared memory initialized...\n");
@@ -224,17 +243,15 @@ int main(int argc, char *argv[]) {
 
         // update shared output
         sm_lockSharedOutput(sharedOutput);
-        sharedOutput->playerPosX = ((ComponentMotion *)dynArrayGet(MotionComponents, player->movementID))->position.x;
-        sharedOutput->playerPosY = ((ComponentMotion *)dynArrayGet(MotionComponents, player->movementID))->position.y;
-        sharedOutput->playerRotation = ((ComponentRotation *)dynArrayGet(RotationComponents, player->rotationID))->rotation;
-        sharedOutput->playerSpeedX = ((ComponentMotion *)dynArrayGet(MotionComponents, player->movementID))->velocity.x;
-        sharedOutput->playerSpeedY = ((ComponentMotion *)dynArrayGet(MotionComponents, player->movementID))->velocity.y;
+        sharedOutput->playerPosX = ((ComponentMotion *)xArray_get(motionComponents, player->movementID))->position.x;
+        sharedOutput->playerPosY = ((ComponentMotion *)xArray_get(motionComponents, player->movementID))->position.y;
+        sharedOutput->playerRotation = ((ComponentRotation *)xArray_get(rotationComponents, player->rotationID))->rotation;
+        sharedOutput->playerSpeedX = ((ComponentMotion *)xArray_get(motionComponents, player->movementID))->velocity.x;
+        sharedOutput->playerSpeedY = ((ComponentMotion *)xArray_get(motionComponents, player->movementID))->velocity.y;
         sharedOutput->closestAsteroidPosX = 0;
         sharedOutput->closestAsteroidPosY = 0;
         sharedOutput->distanceFront = 0;
         sm_unlockSharedOutput(sharedOutput);
-
-        // printf("Shared memory initialized...\n");
     }
 
     // create window and unlock maximum framerate (which will be regulated by other means)
@@ -242,8 +259,6 @@ int main(int argc, char *argv[]) {
         InitWindow(windowWidth, windowHeight, windowName);
         SetTargetFPS(0);
         flags_runtime |= RUNTIME_WINDOW_ACTIVE;
-
-        // printf("Window initialized...\n");
     }
 
     // logic timing variables
@@ -252,17 +267,9 @@ int main(int argc, char *argv[]) {
     double accumulator = 0.0;
     clock_gettime(CLOCK_MONOTONIC, &currentTime);
     double avgFrameTime = 0.0;
-    // printf("Timers initialized...\n");
-
-    // printf("Initial flag states:\n");
-    // printf("\tCMD: %x\n", flags_cmd);
-    // printf("\tRUNTIME: %x\n", flags_runtime);
-    // printf("\tINPUT: %x\n", flags_input);
 
     // main game loop
     while (!(flags_runtime & RUNTIME_EXIT)) {
-        // pre-rendering logic (load resources, update physics, etc.)
-
         // update timing
         struct timespec newTime;
         clock_gettime(CLOCK_MONOTONIC, &newTime);
@@ -277,7 +284,6 @@ int main(int argc, char *argv[]) {
         char fpsText[20];
         avgFrameTime = avgFrameTime * 0.99 + frameTime * 0.01;
         sprintf(fpsText, "FPS: %.2f", 1.0 / avgFrameTime);
-        // printf("%s\n", fpsText);
 
         // delta-time loop
         while (accumulator >= fixedTimeStep) {
@@ -295,72 +301,61 @@ int main(int argc, char *argv[]) {
                 flags_input |= IsKeyDown(KEY_D) ? INPUT_D : 0;
                 flags_input |= IsKeyDown(KEY_SPACE) ? INPUT_SPACE : 0;
             }
-            // printf("Input flags: %x\n", flags_input);
 
             // input-based component updates
             if (IsKeyDown(KEY_ESCAPE)) flags_input |= INPUT_EXIT;
             if (IsKeyDown(KEY_H)) flags_cmd |= CMD_FLAG_HEADLESS;
             if (flags_input & INPUT_W) {
-                float rotation = ((ComponentRotation *)dynArrayGet(RotationComponents, player->rotationID))->rotation;
+                float rotation = ((ComponentRotation *)xArray_get(rotationComponents, player->rotationID))->rotation;
                 Vector2 acceleration = Vector2Scale((Vector2){cosf(rotation), sinf(rotation)}, base_playerAcceleration);
-                ((ComponentMotion *)dynArrayGet(MotionComponents, player->movementID))->acceleration = acceleration;
+                ((ComponentMotion *)xArray_get(motionComponents, player->movementID))->acceleration = acceleration;
             } else {
-                Vector2 acceleration = ((ComponentMotion *)dynArrayGet(MotionComponents, player->movementID))->velocity;
+                Vector2 acceleration = ((ComponentMotion *)xArray_get(motionComponents, player->movementID))->velocity;
                 acceleration = Vector2Scale(acceleration, -0.01f / fixedTimeStep);
-                ((ComponentMotion *)dynArrayGet(MotionComponents, player->movementID))->acceleration = acceleration;
+                ((ComponentMotion *)xArray_get(motionComponents, player->movementID))->acceleration = acceleration;
             }
             if (flags_input & INPUT_A) {
-                ((ComponentRotation *)dynArrayGet(RotationComponents, player->rotationID))->rotationSpeed = -3.f;
+                ((ComponentRotation *)xArray_get(rotationComponents, player->rotationID))->rotationSpeed = -3.f;
             } else if (flags_input & INPUT_D) {
-                ((ComponentRotation *)dynArrayGet(RotationComponents, player->rotationID))->rotationSpeed = 3.f;
-            } else
-                ((ComponentRotation *)dynArrayGet(RotationComponents, player->rotationID))->rotationSpeed = 0.f;
-            // printf("Input handled successfully...\n");
+                ((ComponentRotation *)xArray_get(rotationComponents, player->rotationID))->rotationSpeed = 3.f;
+            } else {
+                ((ComponentRotation *)xArray_get(rotationComponents, player->rotationID))->rotationSpeed = 0.f;
+            }
 
             // headless mode update
             if ((flags_cmd & CMD_FLAG_HEADLESS) && flags_runtime & RUNTIME_WINDOW_ACTIVE) {
                 CloseWindow();
                 flags_runtime &= ~RUNTIME_WINDOW_ACTIVE;
-                // printf("Window closed, going headless...\n");
             } else if (!(flags_cmd & CMD_FLAG_HEADLESS) && !(flags_runtime & RUNTIME_WINDOW_ACTIVE)) {
                 InitWindow(windowWidth, windowHeight, windowName);
                 SetTargetFPS(0);
                 flags_runtime |= RUNTIME_WINDOW_ACTIVE;
-                // printf("Window restored...\n");
             }
 
             // time-based component updates
-            for (size_t i = 0; i < MotionComponents->size; i++) {
-                ComponentMotion *motion = (ComponentMotion *)dynArrayGet(MotionComponents, i);
+            for (int i = 0; i < motionComponents->size; i++) {
+                ComponentMotion *tmpMotion = (ComponentMotion *)xArray_get(motionComponents, i);
 
                 // updating velocity and position
-                motion->velocity = Vector2Add(motion->velocity, Vector2Scale(motion->acceleration, fixedTimeStep));
-                motion->position = Vector2Add(motion->position, Vector2Scale(motion->velocity, fixedTimeStep));
+                tmpMotion->velocity = Vector2Add(tmpMotion->velocity, Vector2Scale(tmpMotion->acceleration, fixedTimeStep));
+                tmpMotion->position = Vector2Add(tmpMotion->position, Vector2Scale(tmpMotion->velocity, fixedTimeStep));
 
                 // position wrapping
-                if (motion->position.x >= windowWidth)
-                    motion->position.x -= windowWidth;
-                else if (motion->position.x < 0)
-                    motion->position.x += windowWidth;
-                if (motion->position.y >= windowHeight)
-                    motion->position.y -= windowHeight;
-                else if (motion->position.y < 0)
-                    motion->position.y += windowHeight;
-
-                // printf("Updated motion component %zu:\n", i);
-                // printf("\tPosition: %f, %f\n", motion->position.x, motion->position.y);
+                if (tmpMotion->position.x >= windowWidth)
+                    tmpMotion->position.x -= windowWidth;
+                else if (tmpMotion->position.x < 0)
+                    tmpMotion->position.x += windowWidth;
+                if (tmpMotion->position.y >= windowHeight)
+                    tmpMotion->position.y -= windowHeight;
+                else if (tmpMotion->position.y < 0)
+                    tmpMotion->position.y += windowHeight;
             }
-            // printf("All motion components updated...\n");
-            for (size_t i = 0; i < RotationComponents->size; i++) {
-                ComponentRotation *rotation = (ComponentRotation *)dynArrayGet(RotationComponents, i);
+            for (int i = 0; i < rotationComponents->size; i++) {
+                ComponentRotation *tmpRotation = (ComponentRotation *)xArray_get(rotationComponents, i);
 
                 // updating rotation
-                rotation->rotation += rotation->rotationSpeed * fixedTimeStep;
-
-                // printf("Updated rotation component %zu:\n", i);
-                // printf("\tRotation: %f\n", rotation->rotation);
+                tmpRotation->rotation += tmpRotation->rotationSpeed * fixedTimeStep;
             }
-            // printf("All rotation components updated...\n");
             // for (size_t i = 0; i < LifetimeComponents->size; i++) {
             //     ComponentLifeTime *tmpLifetime = (ComponentLifeTime *)dynArrayGet(LifetimeComponents, i);
             //     if (tmpLifetime->isAlive) {
@@ -373,12 +368,10 @@ int main(int argc, char *argv[]) {
             //     printf("Updated lifetime component %zu:\n", i);
             //     printf("\tLifetime: %f\n", tmpLifetime->lifeTime);
             // }
-            // printf("All lifetime components updated...\n");
 
             // exit key pressed
             if (flags_input & INPUT_EXIT) {
                 flags_runtime |= RUNTIME_EXIT;
-                // printf("Exit key pressed...\n");
                 break;
             }
 
@@ -395,12 +388,12 @@ int main(int argc, char *argv[]) {
             ClearBackground(BLACK);
 
             // game objects rendering
-            DrawPlayer((ComponentMotion *)dynArrayGet(MotionComponents, player->movementID), (ComponentRotation *)dynArrayGet(RotationComponents, player->rotationID), (ComponentCollisionRect *)dynArrayGet(RectComponents, player->hitboxID));
+            DrawPlayer((ComponentMotion *)xArray_get(motionComponents, player->movementID), (ComponentRotation *)xArray_get(rotationComponents, player->rotationID), (ComponentCollisionRect *)xArray_get(rectComponents, player->hitboxID));
 
             // drawing asteroids
-            for (size_t i = 0; i < AsteroidArray->size; i++) {
-                AsteroidObject *tmpAsteroid = (AsteroidObject *)dynArrayGet(AsteroidArray, i);
-                DrawAsteroid((ComponentMotion *)dynArrayGet(MotionComponents, tmpAsteroid->movementID), (ComponentRotation *)dynArrayGet(RotationComponents, tmpAsteroid->rotationID), (ComponentCollisionCircle *)dynArrayGet(CircleComponents, tmpAsteroid->hitboxID));
+            for (int i = 0; i < asteroidArray->size; i++) {
+                AsteroidObject *tmpAsteroid = (AsteroidObject *)xArray_get(asteroidArray, i);
+                DrawAsteroid((ComponentMotion *)xArray_get(motionComponents, tmpAsteroid->movementID), (ComponentRotation *)xArray_get(rotationComponents, tmpAsteroid->rotationID), (ComponentCollisionCircle *)xArray_get(circleComponents, tmpAsteroid->hitboxID));
             }
 
             // UI rendering
@@ -408,7 +401,6 @@ int main(int argc, char *argv[]) {
             DrawText(fpsText, 10, 10, 20, WHITE);                        // FPS counter
 
             EndDrawing();
-            // printf("Rendering updated...\n");
         }
 
         // post-rendering logic (free resources, etc.)
@@ -416,13 +408,12 @@ int main(int argc, char *argv[]) {
         // update outputs if sharing memory
         if (flags_cmd & (CMD_FLAG_MANAGED | CMD_FLAG_USE_NEURAL)) {
             sm_lockSharedOutput(sharedOutput);
-            sharedOutput->playerPosX = ((ComponentMotion *)dynArrayGet(MotionComponents, player->movementID))->position.x;
-            sharedOutput->playerPosY = ((ComponentMotion *)dynArrayGet(MotionComponents, player->movementID))->position.y;
-            sharedOutput->playerRotation = ((ComponentRotation *)dynArrayGet(RotationComponents, player->rotationID))->rotation;
-            sharedOutput->playerSpeedX = ((ComponentMotion *)dynArrayGet(MotionComponents, player->movementID))->velocity.x;
-            sharedOutput->playerSpeedY = ((ComponentMotion *)dynArrayGet(MotionComponents, player->movementID))->velocity.y;
+            sharedOutput->playerPosX = ((ComponentMotion *)xArray_get(motionComponents, player->movementID))->position.x;
+            sharedOutput->playerPosY = ((ComponentMotion *)xArray_get(motionComponents, player->movementID))->position.y;
+            sharedOutput->playerRotation = ((ComponentRotation *)xArray_get(rotationComponents, player->rotationID))->rotation;
+            sharedOutput->playerSpeedX = ((ComponentMotion *)xArray_get(motionComponents, player->movementID))->velocity.x;
+            sharedOutput->playerSpeedY = ((ComponentMotion *)xArray_get(motionComponents, player->movementID))->velocity.y;
             sm_unlockSharedOutput(sharedOutput);
-            // printf("Shared output updated...\n");
         }
     }
 
@@ -444,49 +435,19 @@ int main(int argc, char *argv[]) {
 
     // free all allocated memory
     free(player);
-    dynArrayForeach(MotionComponents, free);
-    dynArrayForeach(RotationComponents, free);
-    dynArrayForeach(RectComponents, free);
-    dynArrayForeach(CircleComponents, free);
-    // dynArrayForeach(LifetimeComponents, MemFree);
-    destroyDynArray(MotionComponents);
-    destroyDynArray(RotationComponents);
-    destroyDynArray(RectComponents);
-    destroyDynArray(CircleComponents);
-    // destroyDynArray(LifetimeComponents);
+
+    xArray_clear(motionComponents);
+    xArray_clear(rotationComponents);
+    xArray_clear(rectComponents);
+    xArray_clear(circleComponents);
+    // xArray_clear(lifetimeComponents);
+
+    xArray_free(motionComponents);
+    xArray_free(rotationComponents);
+    xArray_free(rectComponents);
+    xArray_free(circleComponents);
+    // xArray_free(lifetimeComponents);
 
     // exit program
     return 0;
-}
-
-void InitAsteroid(AsteroidObject *asteroid, DynArray *motionComponents, DynArray *rotationComponents, DynArray *circleComponents) {
-    if (asteroid == NULL || motionComponents == NULL || rotationComponents == NULL || circleComponents == NULL) return;
-
-    ComponentMotion *motion = malloc(sizeof(ComponentMotion));
-    ComponentRotation *rotation = malloc(sizeof(ComponentRotation));
-    ComponentCollisionCircle *collision = malloc(sizeof(ComponentCollisionCircle));
-
-    if (motion == NULL || rotation == NULL || collision == NULL) {
-        free(motion);
-        free(rotation);
-        free(collision);
-        return;
-    }
-
-    motion->position = (Vector2){GetRandomValue(0, windowWidth), GetRandomValue(0, windowHeight)};
-    motion->velocity = (Vector2){GetRandomValue(-100, 100), GetRandomValue(-100, 100)};
-    motion->acceleration = (Vector2){0, 0};
-    rotation->rotation = 0;
-    rotation->rotationSpeed = GetRandomValue(-3, 3);
-    collision->radius = GetRandomValue(1, 3) * 10.f;
-
-    asteroid->movementID = dynArrayAdd(motionComponents, motion);
-    asteroid->rotationID = dynArrayAdd(rotationComponents, rotation);
-    asteroid->hitboxID = dynArrayAdd(circleComponents, collision);
-
-    // printf("\tPosition: %f, %f\n", motion->position.x, motion->position.y);
-    // printf("\tVelocity: %f, %f\n", motion->velocity.x, motion->velocity.y);
-    // printf("\tSize: %f\n", collision->radius);
-
-    return;
 }
