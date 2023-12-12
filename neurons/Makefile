@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -std=gnu11 -Iinclude -I../common/include -pthread -D_DEFAULT_SOURCE
+CFLAGS = -Wall -Wextra -std=gnu11 -Iinclude -I../common/include -pthread -D_DEFAULT_SOURCE -g
 
 SRC_DIR = src
 OBJ_DIR = obj
