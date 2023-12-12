@@ -45,6 +45,7 @@ void dynArrayRemove(DynArray *dynArray, size_t index) {
 }
 
 void *dynArrayGet(DynArray *dynArray, size_t index) {
+    if(index >= dynArray->size) return NULL; // TODO: error handling (return error code)
     return dynArray->data[index];
 }
 

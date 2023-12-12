@@ -40,7 +40,11 @@ typedef struct {
 
 typedef struct {
     Vector2 hitbox;
-} ComponentCollision;
+} ComponentCollisionRect;
+
+typedef struct {
+    float radius;
+} ComponentCollisionCircle;
 
 //
 // entities
@@ -66,7 +70,9 @@ typedef struct {
 } BulletObject;
 
 // function declarations
-void DrawPlayer(ComponentMotion *motionComponent, ComponentRotation *rotationComponent, ComponentCollision *collisionComponent);
+void DrawPlayer(ComponentMotion *motionComponent, ComponentRotation *rotationComponent, ComponentCollisionRect *collisionComponent);
+
+void DrawAsteroid(ComponentMotion *motionComponent, ComponentRotation *rotationComponent, ComponentCollisionCircle *collisionComponent);
 
 #ifdef __cplusplus
 }
