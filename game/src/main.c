@@ -211,19 +211,12 @@ int main(int argc, char *argv[]) {
 
         sm_lockSharedOutput(sharedOutput);
         sm_initSharedOutput(sharedOutput);
-        // sharedOutput->playerPosX = ((ComponentMotion *)dynArrayGet(MotionComponents, player->movementID))->position.x;
-        // sharedOutput->playerPosY = ((ComponentMotion *)dynArrayGet(MotionComponents, player->movementID))->position.y;
-        // sharedOutput->playerRotation = ((ComponentRotation *)dynArrayGet(RotationComponents, player->rotationID))->rotation;
-        // sharedOutput->playerSpeedX = ((ComponentMotion *)dynArrayGet(MotionComponents, player->movementID))->velocity.x;
-        // sharedOutput->playerSpeedY = ((ComponentMotion *)dynArrayGet(MotionComponents, player->movementID))->velocity.y;
         sharedOutput->playerPosX = ((ComponentMotion *)xArray_get(motionComponents, player->movementID))->position.x;
         sharedOutput->playerPosY = ((ComponentMotion *)xArray_get(motionComponents, player->movementID))->position.y;
         sharedOutput->playerRotation = ((ComponentRotation *)xArray_get(rotationComponents, player->rotationID))->rotation;
         sharedOutput->playerSpeedX = ((ComponentMotion *)xArray_get(motionComponents, player->movementID))->velocity.x;
         sharedOutput->playerSpeedY = ((ComponentMotion *)xArray_get(motionComponents, player->movementID))->velocity.y;
         sm_unlockSharedOutput(sharedOutput);
-
-        // printf("Shared memory initialized...\n");
     }
     // if game is managed, connect to shared memory using given keys
     else if (flags_cmd & CMD_FLAG_MANAGED) {
@@ -364,9 +357,6 @@ int main(int argc, char *argv[]) {
             //             tmpLifetime->isAlive = 0;
             //         }
             //     }
-            //
-            //     printf("Updated lifetime component %zu:\n", i);
-            //     printf("\tLifetime: %f\n", tmpLifetime->lifeTime);
             // }
 
             // exit key pressed
@@ -435,6 +425,9 @@ int main(int argc, char *argv[]) {
 
     // free all allocated memory
     free(player);
+
+    xArray_clear(asteroidArray);
+    xArray_free(asteroidArray);
 
     xArray_clear(motionComponents);
     xArray_clear(rotationComponents);

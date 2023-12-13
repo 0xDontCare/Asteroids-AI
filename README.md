@@ -53,7 +53,7 @@ Management program is currently responsible for creating shared memory between g
 - [ ] Thread synchronization
 
 ### Phase 1.2
-- [ ] Add asteroids
+- [x] Add asteroids
 - [ ] Asteroid collision
 - [ ] Asteroid movement
 - [ ] Add bullets
