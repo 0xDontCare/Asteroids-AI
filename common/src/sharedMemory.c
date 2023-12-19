@@ -19,6 +19,29 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+int sm_validateSharedMemoryName(const char *sharedMemoryName) {
+    if (sharedMemoryName == NULL) {
+        return 0;
+    }
+
+    if (sharedMemoryName[0] != '/') {
+        return 0;
+    }
+
+    int len = 1;  // we already confirmed that first character is '/'
+    while (sharedMemoryName[len] != '\0') {
+        if (sharedMemoryName[len] < '0' || (sharedMemoryName[len] > '9' && sharedMemoryName[len] < 'A') || (sharedMemoryName[len] > 'Z' && sharedMemoryName[len] < 'a') || sharedMemoryName[len] > 'z') {
+            return 0;
+        }
+        len++;
+    }
+    if (len > 249) {  // leaving 5 characters for automatic enumerating suffix and 1 for null terminator
+        return 0;
+    }
+
+    return 1;
+}
+
 struct sharedInput_s *sm_allocateSharedInput(const char *sharedMemoryName) {
     int sharedMemoryFd = shm_open(sharedMemoryName, O_CREAT | O_RDWR, 0666);
     if (sharedMemoryFd == -1) {

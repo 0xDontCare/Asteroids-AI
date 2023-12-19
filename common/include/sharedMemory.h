@@ -56,6 +56,14 @@ struct sharedState_s {
 };
 
 /**
+ * @brief Validate shared memory name.
+ * 
+ * @param sharedMemoryName Pointer to C string containing shared memory key.
+ * @return 1 if shared memory name is valid, 0 otherwise.
+ */
+int sm_validateSharedMemoryName(const char *sharedMemoryName);
+
+/**
  * @brief Allocate or connect to shared memory for input.
  *
  * @param sharedMemoryName Name of shared memory to allocate or connect to.
