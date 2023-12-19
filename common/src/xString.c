@@ -1527,3 +1527,14 @@ int xString_isEqualString(xString *str, xString *str2) {
 int xString_isEqualCString(xString *str, char *cstr) {
     return xString_isEqual(str, (unsigned char *)cstr, xString_CStringLen(cstr));
 }
+
+unsigned long long xString_hash(xString *str) {
+    unsigned long long hash = 0xcbf29ce484222325;  // FNV offset basis
+    if (str && str->data && str->len > 0) {
+        for (int i = 0; i < str->len; i++) {
+            hash ^= (unsigned long long)str->data[i];
+            hash *= 0x100000001b3;  // FNV prime
+        }
+    }
+    return hash;
+}

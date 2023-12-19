@@ -1151,6 +1151,16 @@ int xString_isEqualString(xString *str, xString *str2);
  */
 int xString_isEqualCString(xString *str, char *cstr);
 
+/**
+ * @brief Calculate hash value of xString object.
+ *
+ * @param str Pointer to xString object.
+ * @return Hash value.
+ *
+ * @note Function uses FNV-1a algorithm for calculating hash value of string data.
+ */
+unsigned long long xString_hash(xString *str);
+
 #ifdef __cplusplus
 }
 #endif
