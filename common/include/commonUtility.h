@@ -36,6 +36,13 @@ int cu_CStringIsAlphanumeric(char *string);
  */
 int cu_CStringIsNumeric(char *string);
 
+/**
+ * @brief Trim newline character from the end of the string.
+ * 
+ * @param string Pointer to null-terminated string.
+ */
+void cu_CStringTrimNewline(char *string);
+
 #ifdef __cplusplus
 }
 #endif  // __cplusplus
