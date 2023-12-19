@@ -2,8 +2,8 @@
  * @file xList.h
  * @author 0xDontCare (https://github.com/0xDontCare)
  * @brief Linked list implemenation in xStructures module of xcFramework
- * @version 0.1
- * @date 17.12.2023.
+ * @version 0.2
+ * @date 19.12.2023.
  *
  * @copyright All rights reserved (c) 2023
  *
@@ -358,6 +358,19 @@ xList *xList_copy(xList *list);
  * If any of indexes is out of bounds or equal, no action will be taken.
  */
 void xList_swap(xList *list, int index1, int index2);
+
+/**
+ * @brief
+ * Return hash of list using given hash function.
+ *
+ * @param list Pointer to xList object.
+ * @param hash Hash function.
+ * @return Hash of list.
+ *
+ * @note
+ * Hash function should return hash of given node data depending on the type the list is storing.
+ */
+unsigned long long xList_hash(xList *list, unsigned long long (*hash)(void *));
 
 #ifdef __cplusplus
 }

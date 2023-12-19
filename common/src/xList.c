@@ -529,3 +529,16 @@ void xList_swap(xList *list, int index1, int index2) {
     node1->data = node2->data;
     node2->data = temp;
 }
+
+unsigned long long xList_hash(xList *list, unsigned long long (*hash)(void *)) {
+    unsigned long long rolling_hash = 0;    // rolling hash initial value
+    xListNode *node = list->head;           // list iterator
+
+    while(node != NULL) {
+        unsigned long long node_hash = hash(node->data);
+        rolling_hash = rolling_hash * 31 + node_hash;
+        node = node->next;
+    }
+
+    return rolling_hash;
+}
