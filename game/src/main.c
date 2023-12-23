@@ -67,11 +67,13 @@ int main(int argc, char *argv[]) {
             } else if (xString_isEqualCString(tmpString, "-m") || xString_isEqualCString(tmpString, "--managed")) {
                 if (i + 3 >= argc) break;
 
-                flags_cmd |= CMD_FLAG_MANAGED;
+                flags_cmd |= (CMD_FLAG_MANAGED | CMD_FLAG_HEADLESS);  // managed mode starts headless initially
                 cmd_shInputName = argv[i + 1];
                 cmd_shOutputName = argv[i + 2];
                 cmd_shStateName = argv[i + 3];
                 i += 3;
+
+                printf("[DEBUG] Starting managed with input: %s, output: %s, state: %s\n", cmd_shInputName, cmd_shOutputName, cmd_shStateName);
             } else {
                 printf("ERROR: Unknown command line argument: %s\n", argv[i]);
                 printf("Use %s --help for more information.\n", argv[0]);
@@ -124,12 +126,11 @@ int main(int argc, char *argv[]) {
 
     // flag arguments (shared memory names) should be only alphanumeric strings
     if (flags_cmd & (CMD_FLAG_MANAGED | CMD_FLAG_USE_NEURAL)) {
-        if (!cu_CStringIsAlphanumeric(cmd_shInputName) || !cu_CStringIsAlphanumeric(cmd_shOutputName) || !cu_CStringIsAlphanumeric(cmd_shStateName)) {
+        if (!cu_CStringIsAlphanumeric(cmd_shInputName + 1) || !cu_CStringIsAlphanumeric(cmd_shOutputName + 1) || !cu_CStringIsAlphanumeric(cmd_shStateName + 1)) { // +1 to skip first character (which is a dash)
             printf("ERROR: Shared memory names can only contain alphanumeric characters.\n");
             return 1;
         }
     }
-    // TODO: apply new command line arguments to the rest of the program
 
     // game input flags
     unsigned short flags_input = INPUT_NONE;
@@ -193,7 +194,6 @@ int main(int argc, char *argv[]) {
     ((ComponentRotation *)xArray_get(rotationComponents, player->rotationID))->rotationSpeed = 0;
     ((ComponentCollisionRect *)xArray_get(rectComponents, player->hitboxID))->hitbox = (Vector2){50, 50};
 
-    // TODO: depending on run mode, allocate, connect to or skip creating shared memory
     struct sharedInput_s *sharedInput = NULL;
     struct sharedOutput_s *sharedOutput = NULL;
     struct sharedState_s *sharedState = NULL;
@@ -216,6 +216,9 @@ int main(int argc, char *argv[]) {
         sharedOutput->playerRotation = ((ComponentRotation *)xArray_get(rotationComponents, player->rotationID))->rotation;
         sharedOutput->playerSpeedX = ((ComponentMotion *)xArray_get(motionComponents, player->movementID))->velocity.x;
         sharedOutput->playerSpeedY = ((ComponentMotion *)xArray_get(motionComponents, player->movementID))->velocity.y;
+        sharedOutput->closestAsteroidPosX = 0;
+        sharedOutput->closestAsteroidPosY = 0;
+        sharedOutput->distanceFront = 0;
         sm_unlockSharedOutput(sharedOutput);
     }
     // if game is managed, connect to shared memory using given keys
@@ -241,9 +244,6 @@ int main(int argc, char *argv[]) {
         sharedOutput->playerRotation = ((ComponentRotation *)xArray_get(rotationComponents, player->rotationID))->rotation;
         sharedOutput->playerSpeedX = ((ComponentMotion *)xArray_get(motionComponents, player->movementID))->velocity.x;
         sharedOutput->playerSpeedY = ((ComponentMotion *)xArray_get(motionComponents, player->movementID))->velocity.y;
-        sharedOutput->closestAsteroidPosX = 0;
-        sharedOutput->closestAsteroidPosY = 0;
-        sharedOutput->distanceFront = 0;
         sm_unlockSharedOutput(sharedOutput);
     }
 
@@ -293,11 +293,9 @@ int main(int argc, char *argv[]) {
                 flags_input |= IsKeyDown(KEY_A) ? INPUT_A : 0;
                 flags_input |= IsKeyDown(KEY_D) ? INPUT_D : 0;
                 flags_input |= IsKeyDown(KEY_SPACE) ? INPUT_SPACE : 0;
+                flags_input |= IsKeyDown(KEY_ESCAPE) ? INPUT_EXIT : 0;
             }
 
-            // input-based component updates
-            if (IsKeyDown(KEY_ESCAPE)) flags_input |= INPUT_EXIT;
-            if (IsKeyDown(KEY_H)) flags_cmd |= CMD_FLAG_HEADLESS;
             if (flags_input & INPUT_W) {
                 float rotation = ((ComponentRotation *)xArray_get(rotationComponents, player->rotationID))->rotation;
                 Vector2 acceleration = Vector2Scale((Vector2){cosf(rotation), sinf(rotation)}, base_playerAcceleration);
@@ -308,9 +306,9 @@ int main(int argc, char *argv[]) {
                 ((ComponentMotion *)xArray_get(motionComponents, player->movementID))->acceleration = acceleration;
             }
             if (flags_input & INPUT_A) {
-                ((ComponentRotation *)xArray_get(rotationComponents, player->rotationID))->rotationSpeed = -3.f;
+                ((ComponentRotation *)xArray_get(rotationComponents, player->rotationID))->rotationSpeed = -5.f;
             } else if (flags_input & INPUT_D) {
-                ((ComponentRotation *)xArray_get(rotationComponents, player->rotationID))->rotationSpeed = 3.f;
+                ((ComponentRotation *)xArray_get(rotationComponents, player->rotationID))->rotationSpeed = 5.f;
             } else {
                 ((ComponentRotation *)xArray_get(rotationComponents, player->rotationID))->rotationSpeed = 0.f;
             }
