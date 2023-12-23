@@ -48,10 +48,9 @@ Management program is currently responsible for creating shared memory between g
 - [x] Segment program source code into separate files
 - [x] Add shared memory for game state
 - [x] Separate logic and rendering logic
-- [ ] Basic manager program
-- [ ] Headless mode (partially implemented, control over shared input needs testing)
-- [ ] Signal based exiting
-- [ ] Thread synchronization
+- [x] Basic manager program
+- [x] Headless mode (for game)
+- [x] Signal based exiting (manager to game)
 
 ### Phase 1.2
 - [x] Add asteroids
