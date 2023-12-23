@@ -5,7 +5,7 @@
  * @version 0.2
  * @date 11.12.2023.
  *
- * @copyright Copyright (c) 2023
+ * @copyright All rights reserved (c) 2023
  *
  * Module declares structures and functions used for sharing data between game, manager and neural network programs.
  * All functions have prefix `sm_`.
