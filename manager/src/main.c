@@ -1,13 +1,3 @@
-/**
- * @file programManager.c
- * @author 0xDontCare (https://github.com/0xDontCare)
- * @brief Managing program. Will be used to run the game and the AI as well as creating and destroying shared memory between them.
- * @version 0.1
- * @date 07.11.2023.
- *
- * @copyright Copyright (c) 2023
- *
- */
 #include "main.h"  // enums, structs, etc.
 
 #include <fcntl.h>      // file flags

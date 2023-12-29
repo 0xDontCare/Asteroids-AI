@@ -1,14 +1,3 @@
-/**
- * @file programGame.c
- * @author 0xDontCare (https://github.com/0xDontCare)
- * @brief Main game program. Depending on how it is started, it can take input from keyboard or from external programs in shared memory.
- * @version 0.2
- * @date 11.12.2023.
- *
- * @copyright Copyright (c) 2023
- *
- */
-
 #include "main.h"  // main program header
 
 #include <raylib.h>   // graphics library
