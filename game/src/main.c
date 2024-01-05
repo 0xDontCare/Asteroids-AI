@@ -640,10 +640,10 @@ void DrawGame(void) {
         }
 
         // DEBUG: Drawing colliders, closest asteroid and distance from player to closest asteroid
-        DrawCircleLines(player.collider.x, player.collider.y, player.collider.z, GREEN);
-        DrawCircleV(player.position, 5, BLUE);
-        DrawCircleV(closestAsteroid, 5, RED);
-        DrawText(TextFormat("Distance: %f", distanceFront), 20, 80, 20, WHITE);
+        // DrawCircleLines(player.collider.x, player.collider.y, player.collider.z, GREEN);
+        // DrawCircleV(player.position, 5, BLUE);
+        // DrawCircleV(closestAsteroid, 5, RED);
+        // DrawText(TextFormat("Distance: %f", distanceFront), 20, 80, 20, WHITE);
 
         // Draw status (score, levels cleared, time survived)
         DrawText(TextFormat("SCORE: %04i", score), 20, 20, 20, WHITE);
