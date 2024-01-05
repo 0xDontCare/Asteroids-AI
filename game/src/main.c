@@ -1,50 +1,76 @@
-/**
- * @file programGame.c
- * @author 0xDontCare (https://github.com/0xDontCare)
- * @brief Main game program. Depending on how it is started, it can take input from keyboard or from external programs in shared memory.
- * @version 0.2
- * @date 11.12.2023.
- *
- * @copyright Copyright (c) 2023
- *
- */
-
-#include "main.h"  // main program header
+#include "main.h"  // game enums, structs, constant definitions, etc.
 
 #include <raylib.h>   // graphics library
 #include <raymath.h>  // math library
 #include <stdio.h>    // standard input/output library
-#include <stdlib.h>   // standard library
-#include <time.h>     // time library
+#include <stdlib.h>   // standard library (malloc, free, etc.)
+#include <time.h>     // time library (game logic timer and random seed)
 
-#include "commonUtility.h"  // smaller common utility functions which don't have much to do with the game itself
-#include "ecsObjects.h"     // game entities and components
-#include "sharedMemory.h"   // shared memory interfaces and functions
+#include "commonUtility.h"  // smaller utility functions which don't belong in any standalone module
+#include "sharedMemory.h"   //shared memory interfaces and functions (IPC)
 #include "xArray.h"         // dynamic array library
-#include "xString.h"        // string library
+#include "xString.h"        // safer string library (dynamic allocation, length tracking, etc.)
 
-// constant game globals
-const int windowWidth = 1024;
-const int windowHeight = 768;
-const char *windowName = "Asteroids";
+//------------------------------------------------------------------------------------
+// program globals
 
-// game entry point
+static const int screenWidth = 1024;
+static const int screenHeight = 768;
+
+static const double fixedTimeStep = 1.0 / 60.0;  // 60 FPS
+static double accumulator = 0.0;
+static struct timespec currentTime = {0};
+static struct timespec startTime = {0};  // time when game started (used for calculating total game time)
+
+static unsigned short flags_runtime = RUNTIME_NONE;
+static unsigned short flags_cmd = CMD_FLAG_NONE;
+static unsigned short flags_input = INPUT_NONE;
+
+static char *cmd_shInputName = NULL;
+static char *cmd_shOutputName = NULL;
+static char *cmd_shStateName = NULL;
+static struct sharedInput_s *shInput = NULL;
+static struct sharedOutput_s *shOutput = NULL;
+static struct sharedState_s *shState = NULL;
+
+static bool gameOver = false;
+static bool pause = false;
+static unsigned int score = 0;
+static unsigned short levelsCleared = 0;
+
+// NOTE: Defined triangle is isosceles with common angles of 70 degrees.
+static float shipHeight = 0.0f;
+
+static Player player = {0};
+static Shoot shoot[PLAYER_MAX_BULLETS] = {0};
+static xArray *asteroids = NULL;
+static Vector2 closestAsteroid = {0};
+static float distanceFront = 0.0f;
+
+static double fireCooldown = 0.0;
+static int destroyedMeteorsCount = 0;
+
+//------------------------------------------------------------------------------------
+// local function declarations
+
+static inline void OpenSharedMemory(void);    // connect to shared memory (or create if standalone-neural mode)
+static inline void CloseSharedMemory(void);   // disconnect from shared memory (or destroy if standalone-neural mode)
+static inline void UpdateSharedState(void);   // update state flags in shared memory
+static inline void UpdateSharedInput(void);   // get input from shared memory
+static inline void UpdateSharedOutput(void);  // update output in shared memory
+static inline float AsteroidRadius(int x);    // get asteroiFd radius from size class
+static inline void PregenAsteroids(void);     // pre-generate asteroids (and clear any existing ones)
+static void InitGame(void);                   // initialize game
+static void UpdateGame(void);                 // update game (one time step)
+static void DrawGame(void);                   // draw game (one frame)
+static void UnloadGame(void);                 // unload game (free dynamic structures, shared memory, etc.)
+
+//------------------------------------------------------------------------------------
+// program entry point (main)
+
 int main(int argc, char *argv[]) {
-    /* Command line flags:
-     * 0x01 - help
-     * 0x02 - version
-     * 0x04 - standalone mode
-     * 0x08 - headless mode
-     * 0x10 - use neural network (+2 parameters)
-     * 0x20 - managed mode (+3 parameters)
-     */
-    unsigned short flags_cmd = CMD_FLAG_NONE;
-    char *cmd_shInputName = NULL, *cmd_shOutputName = NULL, *cmd_shStateName = NULL;  // shared memory access names
-
-    // runtime flags (game state, window state, etc.)
-    unsigned short flags_runtime = RUNTIME_NONE;
-
-    // parsing command line arguments
+    // Parsing command line arguments
+    //--------------------------------------------------------------------------------------
     if (argc > 1) {
         int i;
         for (i = 1; i < argc; i++) {
@@ -88,7 +114,7 @@ int main(int argc, char *argv[]) {
             return 1;
         }
     } else {
-        // assuming basic standalone mode by default
+        // assuming basic standalone mode by default (user plays the game without any external programs)
         flags_cmd |= CMD_FLAG_STANDALONE;
     }
 
@@ -104,7 +130,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    // parse set command flags
+    // parse set command flags (help and version; others affect later execution)
     if (flags_cmd & CMD_FLAG_HELP) {
         printf("Usage: %s [OPTIONS]\n", argv[0]);
         printf("Options:\n");
@@ -117,7 +143,7 @@ int main(int argc, char *argv[]) {
         return 0;
     } else if (flags_cmd & CMD_FLAG_VERSION) {
         printf("Program:\t\tAsteroids-game\n");
-        printf("Version:\t\tDEV (P1.1)\n");
+        printf("Version:\t\tDEV (P1.3)\n");
         printf("Compiler version:\t%s\n", __VERSION__);
         printf("Raylib version:\t\t%s\n", RAYLIB_VERSION);
         printf("Compiled on %s at %s\n", __DATE__, __TIME__);
@@ -126,319 +152,521 @@ int main(int argc, char *argv[]) {
 
     // flag arguments (shared memory names) should be only alphanumeric strings
     if (flags_cmd & (CMD_FLAG_MANAGED | CMD_FLAG_USE_NEURAL)) {
-        if (!cu_CStringIsAlphanumeric(cmd_shInputName + 1) || !cu_CStringIsAlphanumeric(cmd_shOutputName + 1) || !cu_CStringIsAlphanumeric(cmd_shStateName + 1)) { // +1 to skip first character (which is a dash)
+        if (!cu_CStringIsAlphanumeric(cmd_shInputName + 1) ||
+            !cu_CStringIsAlphanumeric(cmd_shOutputName + 1) ||
+            !cu_CStringIsAlphanumeric(cmd_shStateName + 1)) {
+            // +1 to skip first character (which is a forward slash)
             printf("ERROR: Shared memory names can only contain alphanumeric characters.\n");
             return 1;
         }
     }
 
-    // game input flags
-    unsigned short flags_input = INPUT_NONE;
-
-    // game constants
-    const float base_playerAcceleration = 500.f;
-
-    // entity-component arrays
-    xArray *motionComponents = xArray_new();
-    xArray *rotationComponents = xArray_new();
-    xArray *rectComponents = xArray_new();
-    xArray *circleComponents = xArray_new();
-    // xArray *lifetimeComponents = xArray_new();
-
-    // allocating player components and adding them to arrays
-    PlayerObject *player = (PlayerObject *)malloc(sizeof(PlayerObject));
-    xArray_push(motionComponents, malloc(sizeof(ComponentMotion)));
-    xArray_push(rotationComponents, malloc(sizeof(ComponentRotation)));
-    xArray_push(rectComponents, malloc(sizeof(ComponentCollisionRect)));
-    player->movementID = motionComponents->size - 1;
-    player->rotationID = rotationComponents->size - 1;
-    player->hitboxID = rectComponents->size - 1;
-
-    // allocating asteroid components and adding them to the components array
-    xArray *asteroidArray = xArray_new();
-    for (size_t i = 0; i < 10; i++) {
-        AsteroidObject *tmpAsteroid = (AsteroidObject *)malloc(sizeof(AsteroidObject));
-        ComponentMotion *astMotion = (ComponentMotion *)malloc(sizeof(ComponentMotion));
-        ComponentRotation *astRotation = (ComponentRotation *)malloc(sizeof(ComponentRotation));
-        ComponentCollisionCircle *astCollision = (ComponentCollisionCircle *)malloc(sizeof(ComponentCollisionCircle));
-
-        if (tmpAsteroid == NULL || astMotion == NULL || astRotation == NULL || astCollision == NULL) {
-            free(tmpAsteroid);
-            free(astMotion);
-            free(astRotation);
-            free(astCollision);
-            break;
-        }
-
-        astMotion->position = (Vector2){GetRandomValue(0, windowWidth), GetRandomValue(0, windowHeight)};
-        astMotion->velocity = (Vector2){GetRandomValue(-100, 100), GetRandomValue(-100, 100)};
-        astMotion->acceleration = (Vector2){0, 0};
-        astRotation->rotation = GetRandomValue(-3, 3);
-        astRotation->rotationSpeed = GetRandomValue(-10, 10);
-        astCollision->radius = GetRandomValue(1, 3) * 10.f;
-
-        xArray_push(motionComponents, astMotion);
-        xArray_push(rotationComponents, astRotation);
-        xArray_push(circleComponents, astCollision);
-        tmpAsteroid->movementID = motionComponents->size - 1;
-        tmpAsteroid->rotationID = rotationComponents->size - 1;
-        tmpAsteroid->hitboxID = circleComponents->size - 1;
-        xArray_push(asteroidArray, tmpAsteroid);
-    }
-
-    // initializing player components
-    ((ComponentMotion *)xArray_get(motionComponents, player->movementID))->position = (Vector2){windowWidth / 2, windowHeight / 2};
-    ((ComponentMotion *)xArray_get(motionComponents, player->movementID))->velocity = (Vector2){0, 0};
-    ((ComponentMotion *)xArray_get(motionComponents, player->movementID))->acceleration = (Vector2){0, 0};
-    ((ComponentRotation *)xArray_get(rotationComponents, player->rotationID))->rotation = 0;
-    ((ComponentRotation *)xArray_get(rotationComponents, player->rotationID))->rotationSpeed = 0;
-    ((ComponentCollisionRect *)xArray_get(rectComponents, player->hitboxID))->hitbox = (Vector2){50, 50};
-
-    struct sharedInput_s *sharedInput = NULL;
-    struct sharedOutput_s *sharedOutput = NULL;
-    struct sharedState_s *sharedState = NULL;
-
-    // if game is running standalone and with neural network, initialize input and output shared memory
-    if (flags_cmd & CMD_FLAG_STANDALONE && flags_cmd & CMD_FLAG_USE_NEURAL) {
-        // allocate shared input and output
-        sharedInput = sm_allocateSharedInput(cmd_shInputName);
-        sharedOutput = sm_allocateSharedOutput(cmd_shOutputName);
-
-        // initialize default values to shared input and output
-        sm_lockSharedInput(sharedInput);
-        sm_initSharedInput(sharedInput);
-        sm_unlockSharedInput(sharedInput);
-
-        sm_lockSharedOutput(sharedOutput);
-        sm_initSharedOutput(sharedOutput);
-        sharedOutput->playerPosX = ((ComponentMotion *)xArray_get(motionComponents, player->movementID))->position.x;
-        sharedOutput->playerPosY = ((ComponentMotion *)xArray_get(motionComponents, player->movementID))->position.y;
-        sharedOutput->playerRotation = ((ComponentRotation *)xArray_get(rotationComponents, player->rotationID))->rotation;
-        sharedOutput->playerSpeedX = ((ComponentMotion *)xArray_get(motionComponents, player->movementID))->velocity.x;
-        sharedOutput->playerSpeedY = ((ComponentMotion *)xArray_get(motionComponents, player->movementID))->velocity.y;
-        sharedOutput->closestAsteroidPosX = 0;
-        sharedOutput->closestAsteroidPosY = 0;
-        sharedOutput->distanceFront = 0;
-        sm_unlockSharedOutput(sharedOutput);
-    }
-    // if game is managed, connect to shared memory using given keys
-    else if (flags_cmd & CMD_FLAG_MANAGED) {
-        // connect to shared memory locations
-        sharedInput = sm_connectSharedInput(cmd_shInputName);
-        sharedOutput = sm_connectSharedOutput(cmd_shOutputName);
-        sharedState = sm_connectSharedState(cmd_shStateName);
-
-        // update own shared state values
-        sm_lockSharedState(sharedState);
-        sharedState->state_gameAlive = 1;
-        sharedState->game_gameLevel = 1;
-        sharedState->game_gameScore = 0;
-        sharedState->game_gameTime = 0.0;
-        sharedState->game_runHeadless = (flags_cmd & CMD_FLAG_HEADLESS) != 0;
-        sm_unlockSharedState(sharedState);
-
-        // update shared output
-        sm_lockSharedOutput(sharedOutput);
-        sharedOutput->playerPosX = ((ComponentMotion *)xArray_get(motionComponents, player->movementID))->position.x;
-        sharedOutput->playerPosY = ((ComponentMotion *)xArray_get(motionComponents, player->movementID))->position.y;
-        sharedOutput->playerRotation = ((ComponentRotation *)xArray_get(rotationComponents, player->rotationID))->rotation;
-        sharedOutput->playerSpeedX = ((ComponentMotion *)xArray_get(motionComponents, player->movementID))->velocity.x;
-        sharedOutput->playerSpeedY = ((ComponentMotion *)xArray_get(motionComponents, player->movementID))->velocity.y;
-        sm_unlockSharedOutput(sharedOutput);
-    }
-
-    // create window and unlock maximum framerate (which will be regulated by other means)
+    // Game initialization (window, screen, objects, timer, etc.)
+    //---------------------------------------------------------
+    SetTraceLogLevel(LOG_WARNING);
     if (!(flags_cmd & CMD_FLAG_HEADLESS)) {
-        InitWindow(windowWidth, windowHeight, windowName);
+        InitWindow(screenWidth, screenHeight, "Asteroids");
         SetTargetFPS(0);
         flags_runtime |= RUNTIME_WINDOW_ACTIVE;
     }
 
-    // logic timing variables
-    struct timespec currentTime;
-    const double fixedTimeStep = 1.0 / 60.0;
-    double accumulator = 0.0;
+    InitGame();
     clock_gettime(CLOCK_MONOTONIC, &currentTime);
-    double avgFrameTime = 0.0;
+    startTime = currentTime;
+    //--------------------------------------------------------------------------------------
 
-    // main game loop
-    while (!(flags_runtime & RUNTIME_EXIT)) {
-        // update timing
-        struct timespec newTime;
+    // Main game loop
+    //--------------------------------------------------------------------------------------
+    while (!(flags_runtime & RUNTIME_EXIT))  // Detect window close button or ESC key
+    {
+        // Update timer
+        struct timespec newTime = {0};
         clock_gettime(CLOCK_MONOTONIC, &newTime);
-        double frameTime = (newTime.tv_sec - currentTime.tv_sec) + (newTime.tv_nsec - currentTime.tv_nsec) / 1e9;
-        if (frameTime > 0.25) {  // note: max frame time to avoid spiral of death
-            frameTime = 0.25;
-        }
+        double frameTime = (newTime.tv_sec - currentTime.tv_sec) + (newTime.tv_nsec - currentTime.tv_nsec) / 1000000000.0;
+        if (frameTime > 0.25) frameTime = 0.25;  // NOTE: maximum accumulated time to avoid spiral of death
         currentTime = newTime;
         accumulator += frameTime;
 
-        // create FPS counter string
-        char fpsText[20];
-        avgFrameTime = avgFrameTime * 0.99 + frameTime * 0.01;
-        sprintf(fpsText, "FPS: %.2f", 1.0 / avgFrameTime);
-
-        // delta-time loop
+        // Update logic (fixed time step)
         while (accumulator >= fixedTimeStep) {
-            // update input control variables depending on run mode
-            if ((flags_cmd & CMD_FLAG_HEADLESS) && !(flags_runtime & RUNTIME_WINDOW_ACTIVE)) {
-                sm_lockSharedInput(sharedInput);
-                flags_input |= (sharedInput->isKeyDownW) ? INPUT_W : 0;
-                flags_input |= (sharedInput->isKeyDownA) ? INPUT_A : 0;
-                flags_input |= (sharedInput->isKeyDownD) ? INPUT_D : 0;
-                flags_input |= (sharedInput->isKeyDownSpace) ? INPUT_SPACE : 0;
-                sm_unlockSharedInput(sharedInput);
-            } else if (flags_runtime & RUNTIME_WINDOW_ACTIVE) {
-                flags_input |= IsKeyDown(KEY_W) ? INPUT_W : 0;
-                flags_input |= IsKeyDown(KEY_A) ? INPUT_A : 0;
-                flags_input |= IsKeyDown(KEY_D) ? INPUT_D : 0;
-                flags_input |= IsKeyDown(KEY_SPACE) ? INPUT_SPACE : 0;
-                flags_input |= IsKeyDown(KEY_ESCAPE) ? INPUT_EXIT : 0;
-            }
-
-            if (flags_input & INPUT_W) {
-                float rotation = ((ComponentRotation *)xArray_get(rotationComponents, player->rotationID))->rotation;
-                Vector2 acceleration = Vector2Scale((Vector2){cosf(rotation), sinf(rotation)}, base_playerAcceleration);
-                ((ComponentMotion *)xArray_get(motionComponents, player->movementID))->acceleration = acceleration;
-            } else {
-                Vector2 acceleration = ((ComponentMotion *)xArray_get(motionComponents, player->movementID))->velocity;
-                acceleration = Vector2Scale(acceleration, -0.01f / fixedTimeStep);
-                ((ComponentMotion *)xArray_get(motionComponents, player->movementID))->acceleration = acceleration;
-            }
-            if (flags_input & INPUT_A) {
-                ((ComponentRotation *)xArray_get(rotationComponents, player->rotationID))->rotationSpeed = -5.f;
-            } else if (flags_input & INPUT_D) {
-                ((ComponentRotation *)xArray_get(rotationComponents, player->rotationID))->rotationSpeed = 5.f;
-            } else {
-                ((ComponentRotation *)xArray_get(rotationComponents, player->rotationID))->rotationSpeed = 0.f;
-            }
-
-            // headless mode update
-            if ((flags_cmd & CMD_FLAG_HEADLESS) && flags_runtime & RUNTIME_WINDOW_ACTIVE) {
-                CloseWindow();
-                flags_runtime &= ~RUNTIME_WINDOW_ACTIVE;
-            } else if (!(flags_cmd & CMD_FLAG_HEADLESS) && !(flags_runtime & RUNTIME_WINDOW_ACTIVE)) {
-                InitWindow(windowWidth, windowHeight, windowName);
-                SetTargetFPS(0);
-                flags_runtime |= RUNTIME_WINDOW_ACTIVE;
-            }
-
-            // time-based component updates
-            for (int i = 0; i < motionComponents->size; i++) {
-                ComponentMotion *tmpMotion = (ComponentMotion *)xArray_get(motionComponents, i);
-
-                // updating velocity and position
-                tmpMotion->velocity = Vector2Add(tmpMotion->velocity, Vector2Scale(tmpMotion->acceleration, fixedTimeStep));
-                tmpMotion->position = Vector2Add(tmpMotion->position, Vector2Scale(tmpMotion->velocity, fixedTimeStep));
-
-                // position wrapping
-                if (tmpMotion->position.x >= windowWidth)
-                    tmpMotion->position.x -= windowWidth;
-                else if (tmpMotion->position.x < 0)
-                    tmpMotion->position.x += windowWidth;
-                if (tmpMotion->position.y >= windowHeight)
-                    tmpMotion->position.y -= windowHeight;
-                else if (tmpMotion->position.y < 0)
-                    tmpMotion->position.y += windowHeight;
-            }
-            for (int i = 0; i < rotationComponents->size; i++) {
-                ComponentRotation *tmpRotation = (ComponentRotation *)xArray_get(rotationComponents, i);
-
-                // updating rotation
-                tmpRotation->rotation += tmpRotation->rotationSpeed * fixedTimeStep;
-            }
-            // for (size_t i = 0; i < LifetimeComponents->size; i++) {
-            //     ComponentLifeTime *tmpLifetime = (ComponentLifeTime *)dynArrayGet(LifetimeComponents, i);
-            //     if (tmpLifetime->isAlive) {
-            //         tmpLifetime->lifeTime -= fixedTimeStep;
-            //         if (tmpLifetime->lifeTime <= 0) {
-            //             tmpLifetime->isAlive = 0;
-            //         }
-            //     }
-            // }
-
-            // exit key pressed
-            if (flags_input & INPUT_EXIT) {
-                flags_runtime |= RUNTIME_EXIT;
-                break;
-            }
-
-            // clear input flags
-            flags_input &= INPUT_NONE;
-
-            // end game logic updates
+            UpdateGame();
             accumulator -= fixedTimeStep;
         }
 
-        // update rendering (if window is open)
-        if (flags_runtime & RUNTIME_WINDOW_ACTIVE) {
-            BeginDrawing();
-            ClearBackground(BLACK);
+        // Draw game
+        DrawGame();
+    }
+    // De-Initialization
+    //--------------------------------------------------------------------------------------
+    UnloadGame();  // Unload dynamically loaded data (textures, sounds, models...)
 
-            // game objects rendering
-            DrawPlayer((ComponentMotion *)xArray_get(motionComponents, player->movementID), (ComponentRotation *)xArray_get(rotationComponents, player->rotationID), (ComponentCollisionRect *)xArray_get(rectComponents, player->hitboxID));
+    CloseWindow();  // Close window and OpenGL context
+    //--------------------------------------------------------------------------------------
 
-            // drawing asteroids
-            for (int i = 0; i < asteroidArray->size; i++) {
-                AsteroidObject *tmpAsteroid = (AsteroidObject *)xArray_get(asteroidArray, i);
-                DrawAsteroid((ComponentMotion *)xArray_get(motionComponents, tmpAsteroid->movementID), (ComponentRotation *)xArray_get(rotationComponents, tmpAsteroid->rotationID), (ComponentCollisionCircle *)xArray_get(circleComponents, tmpAsteroid->hitboxID));
+    return 0;
+}
+
+//------------------------------------------------------------------------------------
+// local function definitions
+
+// open shared memory (or create if standalone-neural mode)
+inline void OpenSharedMemory(void) {
+    if (flags_cmd & CMD_FLAG_MANAGED) {
+        // connect to already existing shared memory
+        shInput = sm_connectSharedInput(cmd_shInputName);
+        shOutput = sm_connectSharedOutput(cmd_shOutputName);
+        shState = sm_connectSharedState(cmd_shStateName);
+
+        if (shInput == NULL || shOutput == NULL || shState == NULL) {
+            printf("ERROR: Failed to connect to shared memory.\n");
+            exit(1);
+        }
+    } else if (flags_cmd & CMD_FLAG_STANDALONE && flags_cmd & CMD_FLAG_USE_NEURAL) {
+        // create new shared memory
+        shInput = sm_allocateSharedInput(cmd_shInputName);
+        shOutput = sm_allocateSharedOutput(cmd_shOutputName);
+
+        if (shInput == NULL || shOutput == NULL) {
+            printf("ERROR: Failed to create shared memory.\n");
+            exit(1);
+        }
+
+        // initialize shared memory values
+        sm_initSharedInput(shInput);
+        sm_initSharedOutput(shOutput);
+    }
+    return;
+}
+
+inline void CloseSharedMemory(void) {
+    if (flags_cmd & CMD_FLAG_MANAGED) {
+        // disconnect from shared memory
+        sm_disconnectSharedInput(shInput);
+        sm_disconnectSharedOutput(shOutput);
+        sm_disconnectSharedState(shState);
+    } else if (flags_cmd & CMD_FLAG_STANDALONE && flags_cmd & CMD_FLAG_USE_NEURAL) {
+        // destroy shared memory
+        sm_freeSharedInput(shInput, cmd_shInputName);
+        sm_freeSharedOutput(shOutput, cmd_shOutputName);
+    }
+
+    // clear dangling pointers
+    shInput = NULL;
+    shOutput = NULL;
+    shState = NULL;
+    return;
+}
+
+inline void UpdateSharedState(void) {
+    if (flags_cmd & CMD_FLAG_MANAGED) {
+        // update shared state memory
+        sm_lockSharedState(shState);
+        shState->game_isOver = gameOver;
+        shState->game_isPaused = pause;
+        shState->game_gameScore = score;
+        shState->game_gameLevel = levelsCleared;
+        shState->game_gameTime = (currentTime.tv_sec - startTime.tv_sec);
+
+        if (shState->control_gameExit || !shState->state_managerAlive) {
+            // game should exit
+            shState->state_gameAlive = false;
+            flags_runtime |= RUNTIME_EXIT;
+        }
+        sm_unlockSharedState(shState);
+    }
+    return;
+}
+
+inline void UpdateSharedInput(void) {
+    if (flags_cmd & CMD_FLAG_USE_NEURAL || flags_cmd & CMD_FLAG_MANAGED) {
+        // update shared input memory
+        sm_lockSharedInput(shInput);
+        flags_input = INPUT_NONE;
+        flags_input |= shInput->isKeyDownW ? INPUT_W : 0;
+        flags_input |= shInput->isKeyDownA ? INPUT_A : 0;
+        flags_input |= shInput->isKeyDownD ? INPUT_D : 0;
+        flags_input |= shInput->isKeyDownSpace ? INPUT_SPACE : 0;
+        sm_unlockSharedInput(shInput);
+    }
+    return;
+}
+
+inline void UpdateSharedOutput(void) {
+    if (flags_cmd & CMD_FLAG_USE_NEURAL || flags_cmd & CMD_FLAG_MANAGED) {
+        // update shared output memory
+        sm_lockSharedOutput(shOutput);
+        shOutput->playerPosX = player.position.x;
+        shOutput->playerPosY = player.position.y;
+        shOutput->playerRotation = player.rotation;
+        shOutput->playerSpeedX = player.speed.x;
+        shOutput->playerSpeedY = player.speed.y;
+        shOutput->distanceFront = distanceFront;
+        shOutput->closestAsteroidPosX = closestAsteroid.x;
+        shOutput->closestAsteroidPosY = closestAsteroid.y;
+        sm_unlockSharedOutput(shOutput);
+    }
+    return;
+}
+
+inline float AsteroidRadius(int x) {
+    // function is obtained by polynomial interpolation of points (1, 5), (2, 10), (3, 20)
+    return (float)(5.0f / 2.0f * (x * x - x) + 5.0f);
+}
+
+// pre-generate asteroids (and clear any existing ones from previous level)
+inline void PregenAsteroids(void) {
+    // clear old asteroids (if any)
+    xArray_clear(asteroids);
+
+    // generate new asteroids
+    for (int i = 0; i < ASTEROID_BASE_GENERATION_COUNT + levelsCleared; i++) {
+        // allocating new asteroid
+        Meteor *newAsteroid = malloc(sizeof(Meteor));
+        if (newAsteroid == NULL) {
+            printf("ERROR: Failed to allocate memory for new asteroid.\n");
+            exit(1);
+        }
+
+        // setting asteroid properties
+        int posx, posy;
+        bool validRange = false;
+
+        newAsteroid->sizeClass = 3;  // all asteroids are large initially
+        while (!validRange) {
+            if ((posx > screenWidth / 2 - 150 && posx < screenWidth / 2 + 150) || (fabsf(player.position.x - posx) < 50.f)) {
+                // asteroid is too close to screen edge or player
+                posx = GetRandomValue(0, screenWidth);
+            } else {
+                validRange = true;
+            }
+        }
+        validRange = false;
+        while (!validRange) {
+            if ((posy > screenHeight / 2 - 150 && posy < screenHeight / 2 + 150) || (fabsf(player.position.y - posy) < 50.f)) {
+                // asteroid is too close to screen edge or player
+                posy = GetRandomValue(0, screenHeight);
+            } else {
+                validRange = true;
+            }
+        }
+        float randomAngle = GetRandomValue(0, 360) * DEG2RAD;
+
+        newAsteroid->position = (Vector2){posx, posy};
+        newAsteroid->speed = Vector2Scale((Vector2){cosf(randomAngle), sinf(randomAngle)}, ASTEROID_SPEED);
+        newAsteroid->radius = AsteroidRadius(newAsteroid->sizeClass + 2);
+        newAsteroid->active = true;
+        newAsteroid->color = WHITE;
+
+        // adding asteroid to array
+        xArray_push(asteroids, (void *)newAsteroid);
+    }
+}
+
+// initialize game variables
+void InitGame(void) {
+    pause = false;
+    score = 0;
+    levelsCleared = 0;
+
+    // initialization of asteroids array
+    if ((asteroids = xArray_new()) == NULL) {
+        printf("ERROR: Failed to allocate asteroids array.\n");
+        exit(1);
+    }
+
+    // initialization of shared memory depending on run mode
+    if (flags_cmd & CMD_FLAG_MANAGED || flags_cmd & CMD_FLAG_USE_NEURAL) {
+        OpenSharedMemory();
+    }
+
+    // initialization of player
+    shipHeight = (PLAYER_BASE_SIZE / 2) / tanf(20 * DEG2RAD);
+    player.position = (Vector2){screenWidth / 2, screenHeight / 2 - shipHeight / 2};
+    player.speed = (Vector2){0, 0};
+    player.acceleration = (Vector2){0, 0};
+    player.rotation = -(PI / 2);
+    player.collider = (Vector3){player.position.x - sinf(player.rotation) * (shipHeight / 2.5f), player.position.y - sinf(player.rotation) * (shipHeight / 2.5f), 12};
+    player.color = WHITE;
+    destroyedMeteorsCount = 0;
+
+    // initialization of bullets
+    for (int i = 0; i < PLAYER_MAX_BULLETS; i++) {
+        shoot[i].position = (Vector2){0, 0};
+        shoot[i].speed = (Vector2){0, 0};
+        shoot[i].radius = 2;
+        shoot[i].active = false;
+        shoot[i].lifeSpawn = 0;
+        shoot[i].color = WHITE;
+    }
+
+    // initialization of asteroids
+    PregenAsteroids();
+
+    startTime = currentTime; // NOTE: added to avoid game time not being reset after game restart
+}
+
+// update logic (one time step)
+void UpdateGame(void) {
+    // update input flags (depending on run mode)
+    if (flags_cmd & CMD_FLAG_MANAGED || flags_cmd & CMD_FLAG_USE_NEURAL) {
+        UpdateSharedInput();
+    } else if (flags_runtime & RUNTIME_WINDOW_ACTIVE) {
+        flags_input |= IsKeyDown(KEY_W) ? INPUT_W : 0;
+        flags_input |= IsKeyDown(KEY_A) ? INPUT_A : 0;
+        flags_input |= IsKeyDown(KEY_D) ? INPUT_D : 0;
+        flags_input |= IsKeyDown(KEY_SPACE) ? INPUT_SPACE : 0;
+        flags_input |= IsKeyPressed(KEY_P) ? INPUT_PAUSE : 0;
+        flags_input |= IsKeyPressed(KEY_ENTER) ? INPUT_ENTER : 0;
+        flags_input |= IsKeyDown(KEY_ESCAPE) ? INPUT_EXIT : 0;
+        flags_runtime |= IsKeyDown(KEY_ESCAPE) ? RUNTIME_EXIT : 0;
+    }
+
+    if (!gameOver) {
+        if (flags_input & INPUT_PAUSE) pause = !pause;
+
+        if (!pause) {
+            // Player logic: rotation
+            if (flags_input & INPUT_A) player.rotation -= PLAYER_BASE_ROTATION * fixedTimeStep;
+            if (flags_input & INPUT_D) player.rotation += PLAYER_BASE_ROTATION * fixedTimeStep;
+
+            // Player logic: acceleration
+            if (flags_input & INPUT_W) {
+                player.acceleration = Vector2Scale((Vector2){cosf(player.rotation), sinf(player.rotation)}, PLAYER_BASE_ACCELERATION);
+            } else {
+                // decelerate to 0.99f of current speed
+                player.acceleration = Vector2Scale(player.speed, -0.01f / fixedTimeStep);
             }
 
-            // UI rendering
-            DrawRectangleLines(0, 0, windowWidth, windowHeight, WHITE);  // game border
-            DrawText(fpsText, 10, 10, 20, WHITE);                        // FPS counter
+            // Player logic: speed
+            player.speed = Vector2Add(player.speed, Vector2Scale(player.acceleration, fixedTimeStep));
 
-            EndDrawing();
+            // Player logic: movement
+            player.position = Vector2Add(player.position, Vector2Scale(player.speed, fixedTimeStep));
+
+            // Collision logic: player vs walls
+            if (player.position.x > screenWidth + shipHeight)
+                player.position.x = -(shipHeight);
+            else if (player.position.x < -(shipHeight))
+                player.position.x = screenWidth + shipHeight;
+            if (player.position.y > (screenHeight + shipHeight))
+                player.position.y = -(shipHeight);
+            else if (player.position.y < -(shipHeight))
+                player.position.y = screenHeight + shipHeight;
+
+            // Player shoot cooldown logic
+            if (fireCooldown > 0.0f) fireCooldown -= 1.0f * fixedTimeStep;
+
+            // Player shoot logic
+            if (flags_input & INPUT_SPACE && fireCooldown <= 0.0f) {
+                for (int i = 0; i < PLAYER_MAX_BULLETS; i++) {
+                    if (!shoot[i].active) {
+                        shoot[i].position = (Vector2){player.position.x + cosf(player.rotation) * (shipHeight), player.position.y + sinf(player.rotation) * (shipHeight)};
+                        shoot[i].active = true;
+                        shoot[i].speed = Vector2Scale((Vector2){cosf(player.rotation), sinf(player.rotation)}, BULLET_SPEED);
+                        shoot[i].rotation = player.rotation;
+                        fireCooldown = FIRE_COOLDOWN;
+                        break;
+                    }
+                }
+            }
+
+            // Shoot life timer
+            for (int i = 0; i < PLAYER_MAX_BULLETS; i++) {
+                if (shoot[i].active) shoot[i].lifeSpawn++;
+            }
+
+            // Shot logic
+            for (int i = 0; i < PLAYER_MAX_BULLETS; i++) {
+                if (shoot[i].active) {
+                    // Movement
+                    shoot[i].position = Vector2Add(shoot[i].position, Vector2Scale(shoot[i].speed, fixedTimeStep));
+
+                    // Collision logic: shoot vs walls
+                    if (shoot[i].position.x > screenWidth + shoot[i].radius) {
+                        shoot[i].active = false;
+                        shoot[i].lifeSpawn = 0;
+                    } else if (shoot[i].position.x < 0 - shoot[i].radius) {
+                        shoot[i].active = false;
+                        shoot[i].lifeSpawn = 0;
+                    }
+                    if (shoot[i].position.y > screenHeight + shoot[i].radius) {
+                        shoot[i].active = false;
+                        shoot[i].lifeSpawn = 0;
+                    } else if (shoot[i].position.y < 0 - shoot[i].radius) {
+                        shoot[i].active = false;
+                        shoot[i].lifeSpawn = 0;
+                    }
+
+                    // Life of shoot
+                    if (shoot[i].lifeSpawn >= BULLET_LIFETIME) {
+                        shoot[i].position = (Vector2){0, 0};
+                        shoot[i].speed = (Vector2){0, 0};
+                        shoot[i].lifeSpawn = 0;
+                        shoot[i].active = false;
+                    }
+                }
+            }
+
+            // asteroid logic
+            player.collider = (Vector3){player.position.x + cosf(player.rotation) * (shipHeight / 2.5f), player.position.y + sinf(player.rotation) * (shipHeight / 2.5f), 12};
+            for (int i = 0; i < asteroids->size; i++) {
+                Meteor *asteroid = (Meteor *)xArray_get(asteroids, i);
+                if (!asteroid->active) continue;
+
+                // collision logic: player vs asteroids
+                if (CheckCollisionCircles((Vector2){player.collider.x, player.collider.y}, player.collider.z, asteroid->position, asteroid->radius)) {
+                    gameOver = true;
+                    break;
+                }
+
+                // asteroid logic: movement
+                asteroid->position = Vector2Add(asteroid->position, Vector2Scale(asteroid->speed, fixedTimeStep));
+
+                // collision logic: asteroid vs walls
+                if (asteroid->position.x > screenWidth + asteroid->radius) {
+                    asteroid->position.x = -(asteroid->radius);
+                } else if (asteroid->position.x < 0 - asteroid->radius) {
+                    asteroid->position.x = screenWidth + asteroid->radius;
+                }
+                if (asteroid->position.y > screenHeight + asteroid->radius) {
+                    asteroid->position.y = -(asteroid->radius);
+                } else if (asteroid->position.y < 0 - asteroid->radius) {
+                    asteroid->position.y = screenHeight + asteroid->radius;
+                }
+            }
+
+            // Collision logic: bullets vs asteroids
+            for (int i = 0; i < PLAYER_MAX_BULLETS; i++) {
+                if (!shoot[i].active) continue;
+
+                for (int j = 0; j < asteroids->size; j++) {
+                    Meteor *asteroid = (Meteor *)xArray_get(asteroids, j);
+                    if (!asteroid->active) continue;
+
+                    if (CheckCollisionCircles(shoot[i].position, shoot[i].radius, asteroid->position, asteroid->radius)) {
+                        shoot[i].active = false;
+                        shoot[i].lifeSpawn = 0;
+                        asteroid->active = false;
+                        score += (asteroid->sizeClass == 3) ? 20 : (asteroid->sizeClass == 2) ? 50
+                                                                                              : 100;
+                        destroyedMeteorsCount++;
+
+                        // spawn smaller asteroids
+                        if (asteroid->sizeClass > 1) {
+                            for (int k = 0; k < 2; k++) {
+                                // allocating new asteroid
+                                Meteor *newAsteroid = malloc(sizeof(Meteor));
+                                if (newAsteroid == NULL) {
+                                    printf("ERROR: Failed to allocate memory for new asteroid.\n");
+                                    exit(1);
+                                }
+
+                                // setting asteroid properties
+                                newAsteroid->sizeClass = asteroid->sizeClass - 1;
+                                newAsteroid->position = (Vector2){asteroid->position.x, asteroid->position.y};
+                                newAsteroid->speed = (Vector2){sinf(shoot[i].rotation) * ASTEROID_SPEED * (k == 0 ? -(4 - newAsteroid->sizeClass) : (4 - newAsteroid->sizeClass)), cosf(shoot[i].rotation) * ASTEROID_SPEED * (k == 0 ? (4 - newAsteroid->sizeClass) : -(4 - newAsteroid->sizeClass))};
+                                newAsteroid->radius = AsteroidRadius(newAsteroid->sizeClass + 2);
+                                newAsteroid->active = true;
+                                newAsteroid->color = WHITE;
+
+                                // adding asteroid to array
+                                xArray_push(asteroids, (void *)newAsteroid);
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+
+            // calculating closest asteroid
+            float minDistance = screenWidth * screenHeight;
+            for (int i = 0; i < asteroids->size; i++) {
+                Meteor *asteroid = (Meteor *)xArray_get(asteroids, i);
+                if (!asteroid->active) continue;
+
+                float tmpDistance = Vector2Distance(player.position, asteroid->position);
+                if (tmpDistance < minDistance) {
+                    minDistance = tmpDistance;
+                    closestAsteroid = asteroid->position;
+                }
+            }
         }
 
-        // post-rendering logic (free resources, etc.)
+        // all asteroids destroyed -> next level
+        if (destroyedMeteorsCount == asteroids->size) {
+            levelsCleared++;
+            PregenAsteroids();
+            destroyedMeteorsCount = 0;
+        }
+    } else if (flags_input & INPUT_ENTER) {
+        InitGame();
+        gameOver = false;
+    }
 
-        // update outputs if sharing memory
-        if (flags_cmd & (CMD_FLAG_MANAGED | CMD_FLAG_USE_NEURAL)) {
-            sm_lockSharedOutput(sharedOutput);
-            sharedOutput->playerPosX = ((ComponentMotion *)xArray_get(motionComponents, player->movementID))->position.x;
-            sharedOutput->playerPosY = ((ComponentMotion *)xArray_get(motionComponents, player->movementID))->position.y;
-            sharedOutput->playerRotation = ((ComponentRotation *)xArray_get(rotationComponents, player->rotationID))->rotation;
-            sharedOutput->playerSpeedX = ((ComponentMotion *)xArray_get(motionComponents, player->movementID))->velocity.x;
-            sharedOutput->playerSpeedY = ((ComponentMotion *)xArray_get(motionComponents, player->movementID))->velocity.y;
-            sm_unlockSharedOutput(sharedOutput);
+    // update output and state IPC (depending on run mode)
+    UpdateSharedOutput();
+    UpdateSharedState();
+
+    flags_input &= INPUT_NONE;
+}
+
+// draw game (one frame)
+void DrawGame(void) {
+    BeginDrawing();
+
+    ClearBackground(BLACK);
+
+    if (!gameOver) {
+        // Draw spaceship
+        Vector2 v1 = {player.position.x + cosf(player.rotation) * (shipHeight), player.position.y + sinf(player.rotation) * (shipHeight)};
+        Vector2 v2 = {player.position.x + sinf(player.rotation) * (PLAYER_BASE_SIZE / 2), player.position.y - cosf(player.rotation) * (PLAYER_BASE_SIZE / 2)};
+        Vector2 v3 = {player.position.x - sinf(player.rotation) * (PLAYER_BASE_SIZE / 2), player.position.y + cosf(player.rotation) * (PLAYER_BASE_SIZE / 2)};
+        DrawTriangleLines(v1, v2, v3, player.color);
+
+        // Draw asteroids
+        for (int i = 0; i < asteroids->size; i++) {
+            Meteor *asteroid = (Meteor *)xArray_get(asteroids, i);
+            if (asteroid->active) {
+                DrawCircleLines(asteroid->position.x, asteroid->position.y, asteroid->radius, asteroid->color);
+                //DrawCircleV(asteroid->position, asteroid->radius, asteroid->color);
+            } else {
+                DrawCircleV(asteroid->position, asteroid->radius, Fade(DARKGRAY, 0.3f));
+            }
+        }
+
+        // Draw shoot
+        for (int i = 0; i < PLAYER_MAX_BULLETS; i++) {
+            if (shoot[i].active) DrawCircleV(shoot[i].position, shoot[i].radius, shoot[i].color);
+        }
+
+        // DEBUG: Drawing colliders, closest asteroid and distance from player to closest asteroid
+        // DrawCircleLines(player.collider.x, player.collider.y, player.collider.z, GREEN);
+        // DrawCircleV(player.position, 5, BLUE);
+        // DrawCircleV(closestAsteroid, 5, RED);
+        // DrawText(TextFormat("Distance: %f", distanceFront), 20, 80, 20, WHITE);
+
+        // Draw status (score, levels cleared, time survived)
+        DrawText(TextFormat("SCORE: %04i", score), 20, 20, 20, WHITE);
+        DrawText(TextFormat("LEVEL: %02i", levelsCleared + 1), 20, 40, 20, WHITE);
+        DrawText(TextFormat("TIME: %02i:%02i", (int)(currentTime.tv_sec - startTime.tv_sec) / 60, (int)(currentTime.tv_sec - startTime.tv_sec) % 60), 20, 60, 20, WHITE);
+
+        if (pause) DrawText("GAME PAUSED", screenWidth / 2 - MeasureText("GAME PAUSED", 40) / 2, screenHeight / 2 - 40, 40, WHITE);
+    } else {
+        DrawText("GAME OVER", GetScreenWidth() / 2 - MeasureText("GAME OVER", 20) / 2, GetScreenHeight() / 2 - 50, 20, WHITE);
+        if (flags_runtime & RUNTIME_WINDOW_ACTIVE && !(flags_cmd & CMD_FLAG_USE_NEURAL || flags_cmd & CMD_FLAG_MANAGED)) {
+            DrawText("PRESS [ENTER] TO PLAY AGAIN", GetScreenWidth() / 2 - MeasureText("PRESS [ENTER] TO PLAY AGAIN", 20) / 2, GetScreenHeight() / 2 - 10, 20, WHITE);
         }
     }
 
-    // close window if open
-    if (flags_runtime & RUNTIME_WINDOW_ACTIVE) {
-        CloseWindow();
-        flags_runtime &= ~RUNTIME_WINDOW_ACTIVE;
-    }
+    EndDrawing();
+}
 
-    // free/close shared memory if used
-    if (flags_cmd & CMD_FLAG_STANDALONE && flags_cmd & CMD_FLAG_USE_NEURAL) {
-        sm_freeSharedInput(sharedInput, cmd_shInputName);
-        sm_freeSharedOutput(sharedOutput, cmd_shOutputName);
-    } else if (flags_cmd & CMD_FLAG_MANAGED) {
-        sm_disconnectSharedInput(sharedInput);
-        sm_disconnectSharedOutput(sharedOutput);
-        sm_disconnectSharedState(sharedState);
-    }
+// unload game variables
+void UnloadGame(void) {
+    // close shared memory (if any)
+    CloseSharedMemory();
 
-    // free all allocated memory
-    free(player);
-
-    xArray_clear(asteroidArray);
-    xArray_free(asteroidArray);
-
-    xArray_clear(motionComponents);
-    xArray_clear(rotationComponents);
-    xArray_clear(rectComponents);
-    xArray_clear(circleComponents);
-    // xArray_clear(lifetimeComponents);
-
-    xArray_free(motionComponents);
-    xArray_free(rotationComponents);
-    xArray_free(rectComponents);
-    xArray_free(circleComponents);
-    // xArray_free(lifetimeComponents);
-
-    // exit program
-    return 0;
+    // clear all dynamic structures
+    xArray_clear(asteroids);
+    xArray_free(asteroids);
 }

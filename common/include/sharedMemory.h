@@ -5,7 +5,7 @@
  * @version 0.2
  * @date 11.12.2023.
  *
- * @copyright Copyright (c) 2023
+ * @copyright All rights reserved (c) 2023
  *
  * Module declares structures and functions used for sharing data between game, manager and neural network programs.
  * All functions have prefix `sm_`.
@@ -20,13 +20,14 @@ extern "C" {
 #endif  // __cplusplus
 
 #include <pthread.h>
+#include <stdbool.h>
 
 struct sharedInput_s {
     pthread_mutex_t mutex;
-    int isKeyDownW;
-    int isKeyDownA;
-    int isKeyDownD;
-    int isKeyDownSpace;
+    bool isKeyDownW;
+    bool isKeyDownA;
+    bool isKeyDownD;
+    bool isKeyDownSpace;
 };
 
 struct sharedOutput_s {
@@ -42,29 +43,33 @@ struct sharedOutput_s {
 };
 
 struct sharedState_s {
-    pthread_mutex_t mutex;  // access mutex for shared state
+    pthread_mutex_t mutex;  // access mutex for shared state (should be locked before reading/writing values)
 
-    int state_gameAlive;     // status if game program is running (activated by game on start)
-    int state_managerAlive;  // status if manager program is running (activated by manager on start)
-    int state_neuronsAlive;  // status if neural network program is running (activated by NN program on start)
+    bool state_gameAlive;     // status if game program is running (activated by game on start)
+    bool state_managerAlive;  // status if manager program is running (activated by manager on start)
+    bool state_neuronsAlive;  // status if neural network program is running (activated by NN program on start)
 
-    int game_isPaused;     // status if game is paused (modified by game)
-    int game_runHeadless;  // status if game is running headless (modified by manager)
-    int game_gameScore;    // current game score (modified by game)
-    int game_gameLevel;    // current game level (modified by game)
-    double game_gameTime;  // current game time  (modified by game)
+    bool control_gameExit;     // status if game should exit (modified by manager)
+    bool control_neuronsExit;  // status if neural network should exit (modified by manager)
+
+    bool game_isOver;       // status if game is over (modified by game)
+    bool game_isPaused;     // status if game is paused (modified by game)
+    bool game_runHeadless;  // status if game is running headless (modified by manager)
+    int game_gameScore;     // current game score (modified by game)
+    int game_gameLevel;     // current game level (modified by game)
+    long game_gameTime;   // current game time  (modified by game)
 };
 
 /**
  * @brief Validate shared memory name.
- * 
+ *
  * @param sharedMemoryName Pointer to C string containing shared memory key.
  * @return 1 if shared memory name is valid, 0 otherwise.
  */
 int sm_validateSharedMemoryName(const char *sharedMemoryName);
 
 /**
- * @brief Allocate or connect to shared memory for input.
+ * @brief Connect to shared memory for input (or create if it doesn't exist).
  *
  * @param sharedMemoryName Name of shared memory to allocate or connect to.
  * @return Pointer to shared memory structure.
@@ -128,7 +133,7 @@ void sm_lockSharedInput(struct sharedInput_s *sharedInput);
 void sm_unlockSharedInput(struct sharedInput_s *sharedInput);
 
 /**
- * @brief Allocate or connect to shared memory for output.
+ * @brief Connect to shared memory for output (or create if it doesn't exist).
  *
  * @param sharedMemoryName Name of shared memory to allocate or connect to.
  * @return Pointer to shared memory structure.
@@ -182,7 +187,7 @@ void sm_lockSharedOutput(struct sharedOutput_s *sharedOutput);
 void sm_unlockSharedOutput(struct sharedOutput_s *sharedOutput);
 
 /**
- * @brief Allocate or connect to shared memory for shared state.
+ * @brief Connect to shared memory for shared state (or create if it doesn't exist).
  *
  * @param sharedMemoryName Name of shared memory to allocate or connect to.
  * @return Pointer to shared memory structure.

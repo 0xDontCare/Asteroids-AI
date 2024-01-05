@@ -1,11 +1,11 @@
 /**
  * @file commonUtility.h
- * @author 0xDontCare (you@domain.com)
+ * @author 0xDontCare (https://github.com/0xDontCare)
  * @brief Common utility functions for all three programs (manager, game and network). All functions have prefix `cu_`.
  * @version 0.2
  * @date 04.12.2023.
  *
- * @copyright Copyright (c) 2023
+ * @copyright All rights reserved (c) 2023
  *
  */
 

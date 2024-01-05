@@ -15,7 +15,7 @@ The game is a classical arcade game where the player controls a spaceship and ha
 To be implemented soon...
 
 ### Management program
-Management program is currently responsible for creating shared memory between game and external programs as well as starting instance of a game. Once game stops running, it will free shared memory from the system.
+Management program is currently responsible for creating shared memory between game and external programs as well as starting instance of a game. Once game stops running, it will free shared memory from the system. Further development will be continued in phase 3.0 onwards and is for now halted (currently implemented functionality is not guaranteed to work as game and neural network agent are developed in meantime).
 
 ## Installation
 ### Linux
@@ -54,22 +54,23 @@ Management program is currently responsible for creating shared memory between g
 
 ### Phase 1.2
 - [x] Add asteroids
-- [ ] Asteroid collision
-- [ ] Asteroid movement
-- [ ] Add bullets
-- [ ] Bullet collision
-- [ ] Bullet movement
+- [x] Asteroid collision
+- [x] Asteroid movement
+- [x] Add bullets
+- [x] Bullet collision
+- [x] Bullet movement
 
 ### Phase 1.3
-- [ ] Structure code into more separate files
-- [ ] Sprites for player, asteroids and bullets
+- [x] Structure code into more separate files (code had multiple restructurings done already -> skipped)
+- [x] Add game over screen
+- [x] Add score
+- [x] Add time counter
+- [x] Add level counter
 
-### Phase 1.4
-- [ ] Add score
-- [ ] Add time counter
-- [ ] Add level counter
-- [ ] Add game over screen
-- [ ] Add sound effects (optional)
+### Phase 1.4 (optional features)
+- [ ] Add menu screen
+- [ ] Sprites for player, asteroids and bullets
+- [ ] Add sound effects
 
 ### Phase 2.0
 - [ ] Neural network architecture model

@@ -5,7 +5,7 @@
  * @version 0.3
  * @date 22.12.2023.
  *
- * @copyright Copyright (c) 2023
+ * @copyright All rights reserved (c) 2023
  *
  */
 

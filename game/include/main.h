@@ -5,12 +5,17 @@
  * @version 0.1
  * @date 11.12.2023.
  *
- * @copyright Copyright (c) 2023
+ * @copyright All rights reserved (c) 2023
  *
  */
 
 #ifndef MAIN_H
 #define MAIN_H
+
+#include <raylib.h>
+
+// ------------------------------------------------------------------
+// game enum definitions
 
 /* Command line flags:
  * 0x01 - help
@@ -43,7 +48,9 @@ enum input_e {
     INPUT_A = 0x02,
     INPUT_D = 0x04,
     INPUT_SPACE = 0x08,
-    INPUT_EXIT = 0x10
+    INPUT_PAUSE = 0x10,
+    INPUT_ENTER = 0x20,
+    INPUT_EXIT = 0x40
 };
 
 /* Game runtime flags
@@ -59,5 +66,57 @@ enum gameRuntime_e {
     RUNTIME_EXIT = 0x04,
     RUNTIME_WINDOW_ACTIVE = 0x08
 };
+
+// ------------------------------------------------------------------
+// game struct definitions
+
+// player game object descriptor
+typedef struct player_s {
+    Vector2 position;      // center position
+    Vector2 speed;         // velocity
+    Vector2 acceleration;  // acceleration
+    float rotation;        // rotation
+    Vector3 collider;      // triangle collider info
+    Color color;           // render color
+} Player;
+
+// bullet game object descriptor
+typedef struct bullet_s {
+    Vector2 position;  // center position
+    Vector2 speed;     // velocity
+    float radius;      // collision radius
+    float rotation;    // rotation
+    int lifeSpawn;     // lifespan in frames
+    bool active;       // is active (not destroyed/dead)
+    Color color;       // render color
+} Shoot;
+
+// asteroid game object descriptor
+typedef struct asteroid_s {
+    int sizeClass;     // 1 - small, 2 - medium, 3 - large
+    Vector2 position;  // center position
+    Vector2 speed;     // velocity
+    float radius;      // collision radius
+    bool active;       // is active (not destroyed)
+    Color color;       // render color
+} Meteor;
+
+// game constant definitions
+#define PLAYER_BASE_SIZE 20.0f           // player base size in pixels
+#define PLAYER_MAX_BULLETS 10            // maximum number of bullets on screen
+#define PLAYER_BASE_ACCELERATION 500.0f  // acceleration in pixels per second^2
+#define PLAYER_BASE_ROTATION 5.f         // rotation speed in radians
+
+#define ASTEROID_SPEED 100                // asteroid base speed in pixels per second
+#define ASTEROID_BASE_GENERATION_COUNT 4  // number of asteroids generated at game start
+
+#define BULLET_LIFETIME 80   // bullet lifespan in frames
+#define BULLET_SPEED 500.0f  // bullet speed in pixels per second
+#define FIRE_COOLDOWN 0.15f  // time between shots in seconds
+
+// ------------------------------------------------------------------
+// game function declarations
+Player* playerInit(void);
+void playerFree(Player* player);
 
 #endif  // MAIN_H
