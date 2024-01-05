@@ -15,7 +15,7 @@ The game is a classical arcade game where the player controls a spaceship and ha
 To be implemented soon...
 
 ### Management program
-Management program is currently responsible for creating shared memory between game and external programs as well as starting instance of a game. Once game stops running, it will free shared memory from the system.
+Management program is currently responsible for creating shared memory between game and external programs as well as starting instance of a game. Once game stops running, it will free shared memory from the system. Further development will be continued in phase 3.0 onwards and is for now halted (currently implemented functionality is not guaranteed to work as game and neural network agent are developed in meantime).
 
 ## Installation
 ### Linux
