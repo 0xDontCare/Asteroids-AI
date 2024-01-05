@@ -67,26 +67,25 @@ Management program is currently responsible for creating shared memory between g
 - [x] Add time counter
 - [x] Add level counter
 
-### Phase 1.4 (optional features)
-- [ ] Add menu screen
-- [ ] Sprites for player, asteroids and bullets
-- [ ] Add sound effects
-
 ### Phase 2.0
 - [ ] Neural network architecture model
 - [ ] Random agent (random actions)
+- [ ] Network serialization and deserialization
 
 ### Phase 2.1
-- [ ] Training management program
+- [ ] Management program
 - [ ] Running multiple agents and games in parallel
 - [ ] Evaluation of agents (score, time, level)
 
 ### Phase 3.0
 - [ ] Fitness function (score, time)
-- [ ] Serialization of neural network data
-- [ ] Deserialization of neural network data
-
-### Phase 3.1
 - [ ] Implement genetic algorithm
-- [ ] Add training mode
+- [ ] Add training functionality to management program
+
+### Optionals 1.1
+- [ ] Add game menu screen
+- [ ] Sprites for player, asteroids and bullets
+- [ ] Add game sound effects
+
+### Optionals 2.1
 - [ ] Montage of training generations (optional)
