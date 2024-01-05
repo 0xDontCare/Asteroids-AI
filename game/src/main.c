@@ -42,7 +42,7 @@ static unsigned short levelsCleared = 0;
 static float shipHeight = 0.0f;
 
 static Player player = {0};
-static Shoot shoot[PLAYER_MAX_SHOOTS] = {0};
+static Shoot shoot[PLAYER_MAX_BULLETS] = {0};
 static xArray *asteroids = NULL;
 static Vector2 closestAsteroid = {0};
 static float distanceFront = 0.0f;
@@ -390,7 +390,7 @@ void InitGame(void) {
     destroyedMeteorsCount = 0;
 
     // initialization of bullets
-    for (int i = 0; i < PLAYER_MAX_SHOOTS; i++) {
+    for (int i = 0; i < PLAYER_MAX_BULLETS; i++) {
         shoot[i].position = (Vector2){0, 0};
         shoot[i].speed = (Vector2){0, 0};
         shoot[i].radius = 2;
@@ -458,7 +458,7 @@ void UpdateGame(void) {
 
             // Player shoot logic
             if (flags_input & INPUT_SPACE && fireCooldown <= 0.0f) {
-                for (int i = 0; i < PLAYER_MAX_SHOOTS; i++) {
+                for (int i = 0; i < PLAYER_MAX_BULLETS; i++) {
                     if (!shoot[i].active) {
                         shoot[i].position = (Vector2){player.position.x + cosf(player.rotation) * (shipHeight), player.position.y + sinf(player.rotation) * (shipHeight)};
                         shoot[i].active = true;
@@ -471,12 +471,12 @@ void UpdateGame(void) {
             }
 
             // Shoot life timer
-            for (int i = 0; i < PLAYER_MAX_SHOOTS; i++) {
+            for (int i = 0; i < PLAYER_MAX_BULLETS; i++) {
                 if (shoot[i].active) shoot[i].lifeSpawn++;
             }
 
             // Shot logic
-            for (int i = 0; i < PLAYER_MAX_SHOOTS; i++) {
+            for (int i = 0; i < PLAYER_MAX_BULLETS; i++) {
                 if (shoot[i].active) {
                     // Movement
                     shoot[i].position = Vector2Add(shoot[i].position, Vector2Scale(shoot[i].speed, fixedTimeStep));
@@ -635,7 +635,7 @@ void DrawGame(void) {
         }
 
         // Draw shoot
-        for (int i = 0; i < PLAYER_MAX_SHOOTS; i++) {
+        for (int i = 0; i < PLAYER_MAX_BULLETS; i++) {
             if (shoot[i].active) DrawCircleV(shoot[i].position, shoot[i].radius, shoot[i].color);
         }
 

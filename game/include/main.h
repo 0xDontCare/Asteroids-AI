@@ -79,15 +79,6 @@ typedef struct player_s {
     Vector3 collider;      // triangle collider info
     Color color;           // render color
 } Player;
-// typedef struct player_s {
-//     Vector2 position;
-//     Vector2 velocity;
-//     float acceleration;
-//     float rotation;
-//     float rotationSpeed;
-//     Vector3 collider;
-//     Color color;
-// } Player;
 
 // bullet game object descriptor
 typedef struct bullet_s {
@@ -99,14 +90,6 @@ typedef struct bullet_s {
     bool active;       // is active (not destroyed/dead)
     Color color;       // render color
 } Shoot;
-// typedef struct bullet_s {
-//     Vector2 position;
-//     Vector2 velocity;
-//     float radius;
-//     int lifeTime;
-//     bool byPlayer; // for potentially adding enemy ships at some point
-//     Color color;
-// } Bullet;
 
 // asteroid game object descriptor
 typedef struct asteroid_s {
@@ -117,31 +100,15 @@ typedef struct asteroid_s {
     bool active;       // is active (not destroyed)
     Color color;       // render color
 } Meteor;
-// typedef struct asteroid_s {
-//     Vector2 position;
-//     Vector2 velocity;
-//     float radius;
-//     bool active;
-//     Color color;
-// } Asteroid;
 
 // game constant definitions
 #define PLAYER_BASE_SIZE 20.0f           // player base size in pixels
 #define PLAYER_MAX_BULLETS 10            // maximum number of bullets on screen
 #define PLAYER_BASE_ACCELERATION 500.0f  // acceleration in pixels per second^2
 #define PLAYER_BASE_ROTATION 5.f         // rotation speed in radians
-#define PLAYER_SPEED 6.0f
-#define PLAYER_MAX_SHOOTS 10
 
 #define ASTEROID_SPEED 100                // asteroid base speed in pixels per second
 #define ASTEROID_BASE_GENERATION_COUNT 4  // number of asteroids generated at game start
-#define ASTEROID_BASE_SIZE 20.0f          // asteroid base size in pixels
-#define ASTEROID_BASE_SPEED 100.0f        // asteroid max speed in pixels per second
-
-#define METEORS_SPEED 50
-#define MAX_BIG_METEORS 4
-#define MAX_MEDIUM_METEORS 8
-#define MAX_SMALL_METEORS 16
 
 #define BULLET_LIFETIME 80   // bullet lifespan in frames
 #define BULLET_SPEED 500.0f  // bullet speed in pixels per second
