@@ -68,12 +68,12 @@ Management program is currently responsible for creating shared memory between g
 - [x] Add level counter
 
 ### Phase 2.0
-- [+] Neural network architecture model
-- [+] Random agent (random actions)
-- [ ] Network serialization and deserialization
+- [x] Neural network architecture model
+- [x] Random agent (random actions)
 
 ### Phase 2.1
 - [ ] Management program
+- [ ] Network serialization and deserialization
 - [ ] Running multiple agents and games in parallel
 - [ ] Evaluation of agents (score, time, level)
 
