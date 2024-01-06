@@ -140,12 +140,12 @@ void xMatrix_add(xMatrix *res, xMatrix *mat1, xMatrix *mat2) {
 void xMatrix_sub(xMatrix *res, xMatrix *mat1, xMatrix *mat2) {
     // check matrix dimensions
     if (mat1->rows != mat2->rows || mat1->cols != mat2->cols || res->rows != mat1->rows || res->cols != mat1->cols) {
-        return NULL;
+        return;
     }
 
     // check if matrix data is not NULL
     if (res->data == NULL || mat1->data == NULL || mat2->data == NULL) {
-        return NULL;
+        return;
     }
 
     // calculate matrix difference
@@ -157,14 +157,19 @@ void xMatrix_sub(xMatrix *res, xMatrix *mat1, xMatrix *mat2) {
 }
 
 void xMatrix_dot(xMatrix *res, xMatrix *mat1, xMatrix *mat2) {
+    // check if res matrix is not any of the input matrices
+    if (res == mat1 || res == mat2) {
+        return;
+    }
+
     // check if matrix dimensions are valid
     if (mat1->cols != mat2->rows || res->rows != mat1->rows || res->cols != mat2->cols) {
-        return NULL;
+        return;
     }
 
     // check if matrix data is not NULL
     if (res->data == NULL || mat1->data == NULL || mat2->data == NULL) {
-        return NULL;
+        return;
     }
 
     // calculate matrix product
