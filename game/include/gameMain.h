@@ -1,11 +1,11 @@
 /**
- * @file main.h
+ * @file gameMain.h
  * @author 0xDontCare (https://github.com/0xDontCare)
  * @brief Game related enums, structs, etc.
- * @version 0.1
- * @date 11.12.2023.
+ * @version 0.2
+ * @date 06.01.2024.
  *
- * @copyright All rights reserved (c) 2023
+ * @copyright All rights reserved (c) 2024
  *
  */
 

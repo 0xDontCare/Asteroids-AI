@@ -1,4 +1,4 @@
-#include "main.h"  // game enums, structs, constant definitions, etc.
+#include "gameMain.h"  // game enums, structs, constant definitions, etc.
 
 #include <raylib.h>   // graphics library
 #include <raymath.h>  // math library
@@ -402,7 +402,7 @@ void InitGame(void) {
     // initialization of asteroids
     PregenAsteroids();
 
-    startTime = currentTime; // NOTE: added to avoid game time not being reset after game restart
+    startTime = currentTime;  // NOTE: added to avoid game time not being reset after game restart
 }
 
 // update logic (one time step)
@@ -628,7 +628,7 @@ void DrawGame(void) {
             Meteor *asteroid = (Meteor *)xArray_get(asteroids, i);
             if (asteroid->active) {
                 DrawCircleLines(asteroid->position.x, asteroid->position.y, asteroid->radius, asteroid->color);
-                //DrawCircleV(asteroid->position, asteroid->radius, asteroid->color);
+                // DrawCircleV(asteroid->position, asteroid->radius, asteroid->color);
             } else {
                 DrawCircleV(asteroid->position, asteroid->radius, Fade(DARKGRAY, 0.3f));
             }
