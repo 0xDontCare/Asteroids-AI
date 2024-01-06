@@ -147,7 +147,7 @@ int main(int argc, char *argv[]) {
         return 0;
     } else if (flags_cmd & CMD_FLAG_VERSION) {
         printf("Program:\t\tAsteroids-game\n");
-        printf("Version:\t\tDEV (P1.3)\n");
+        printf("Version:\t\tDEV (P2.0)\n");
         printf("Compiler version:\t%s\n", __VERSION__);
         printf("Raylib version:\t\t%s\n", RAYLIB_VERSION);
         printf("Compiled on %s at %s\n", __DATE__, __TIME__);
