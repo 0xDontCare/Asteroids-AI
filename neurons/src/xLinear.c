@@ -45,71 +45,6 @@ void xMatrix_free(xMatrix *mat) {
     mat = NULL;
 }
 
-xMatrix *xMatrix_add(xMatrix *mat1, xMatrix *mat2) {
-    // check matrix dimensions
-    if (mat1->rows != mat2->rows || mat1->cols != mat2->cols) {
-        return NULL;
-    }
-
-    xMatrix *retMatrix = xMatrix_new(mat1->rows, mat1->cols);
-    // check if matrix is successfully allocated
-    if (retMatrix == NULL) {
-        return NULL;
-    }
-
-    for (int i = 0; i < retMatrix->rows; i++) {
-        for (int j = 0; j < retMatrix->cols; j++) {
-            retMatrix->data[i][j] = mat1->data[i][j] + mat2->data[i][j];
-        }
-    }
-
-    return retMatrix;
-}
-
-xMatrix *xMatrix_sub(xMatrix *mat1, xMatrix *mat2) {
-    // check matrix dimensions
-    if (mat1->rows != mat2->rows || mat1->cols != mat2->cols) {
-        return NULL;
-    }
-
-    xMatrix *retMatrix = xMatrix_new(mat1->rows, mat1->cols);
-    // check if matrix is successfully allocated
-    if (retMatrix == NULL) {
-        return NULL;
-    }
-
-    for (int i = 0; i < retMatrix->rows; i++) {
-        for (int j = 0; j < retMatrix->cols; j++) {
-            retMatrix->data[i][j] = mat1->data[i][j] - mat2->data[i][j];
-        }
-    }
-
-    return retMatrix;
-}
-
-xMatrix *xMatrix_dot(xMatrix *mat1, xMatrix *mat2) {
-    // check if matrix dimensions are valid
-    if (mat1->cols != mat2->rows) {
-        return NULL;
-    }
-
-    xMatrix *retMatrix = xMatrix_new(mat1->rows, mat2->cols);
-    // check if matrix is successfully allocated
-    if (retMatrix == NULL) {
-        return NULL;
-    }
-
-    for (int i = 0; i < mat1->rows; i++) {
-        for (int j = 0; j < mat2->cols; j++) {
-            for (int k = 0; k < mat1->cols; k++) {
-                retMatrix->data[i][j] += mat1->data[i][k] * mat2->data[k][j];
-            }
-        }
-    }
-
-    return retMatrix;
-}
-
 xMatrix *xMatrix_slice(xMatrix *mat, int row_start, int row_end, int col_start, int col_end) {
     // validate index bounds
     if (row_start < 0 || row_end >= mat->rows || row_start >= row_end || col_start < 0 || col_end >= mat->cols || col_start >= col_end) {
@@ -181,6 +116,70 @@ xMatrix *xMatrix_col(xMatrix *mat, int colIndex) {
     }
 
     return col;
+}
+
+void xMatrix_add(xMatrix *res, xMatrix *mat1, xMatrix *mat2) {
+    // check matrix dimensions
+    if (mat1->rows != mat2->rows || mat1->cols != mat2->cols || res->rows != mat1->rows || res->cols != mat1->cols) {
+        return;
+    }
+
+    // check if matrix data is not NULL
+    if (res->data == NULL || mat1->data == NULL || mat2->data == NULL) {
+        return;
+    }
+
+    // calculate matrix sum
+    for (int i = 0; i < res->rows; i++) {
+        for (int j = 0; j < res->cols; j++) {
+            res->data[i][j] = mat1->data[i][j] + mat2->data[i][j];
+        }
+    }
+}
+
+void xMatrix_sub(xMatrix *res, xMatrix *mat1, xMatrix *mat2) {
+    // check matrix dimensions
+    if (mat1->rows != mat2->rows || mat1->cols != mat2->cols || res->rows != mat1->rows || res->cols != mat1->cols) {
+        return;
+    }
+
+    // check if matrix data is not NULL
+    if (res->data == NULL || mat1->data == NULL || mat2->data == NULL) {
+        return;
+    }
+
+    // calculate matrix difference
+    for (int i = 0; i < res->rows; i++) {
+        for (int j = 0; j < res->cols; j++) {
+            res->data[i][j] = mat1->data[i][j] - mat2->data[i][j];
+        }
+    }
+}
+
+void xMatrix_dot(xMatrix *res, xMatrix *mat1, xMatrix *mat2) {
+    // check if res matrix is not any of the input matrices
+    if (res == mat1 || res == mat2) {
+        return;
+    }
+
+    // check if matrix dimensions are valid
+    if (mat1->cols != mat2->rows || res->rows != mat1->rows || res->cols != mat2->cols) {
+        return;
+    }
+
+    // check if matrix data is not NULL
+    if (res->data == NULL || mat1->data == NULL || mat2->data == NULL) {
+        return;
+    }
+
+    // calculate matrix product
+    for (int i = 0; i < mat1->rows; i++) {
+        for (int j = 0; j < mat2->cols; j++) {
+            for (int k = 0; k < mat1->cols; k++) {
+                res->data[i][j] += mat1->data[i][k] * mat2->data[k][j];
+            }
+        }
+    }
 }
 
 void xMatrix_transpose(xMatrix *mat) {

@@ -1,4 +1,4 @@
-#include "main.h"  // enums, structs, etc.
+#include "managerMain.h"  // enums, structs, etc.
 
 #include <fcntl.h>      // file flags
 #include <signal.h>     // kill, SIGTERM

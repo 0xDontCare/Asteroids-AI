@@ -1,10 +1,13 @@
-#include "main.h"  // game enums, structs, constant definitions, etc.
+#include "gameMain.h"  // game enums, structs, constant definitions, etc.
 
+#include <fcntl.h>    // file control options (open, close, etc.)
 #include <raylib.h>   // graphics library
 #include <raymath.h>  // math library
+#include <signal.h>   // signal handling library
 #include <stdio.h>    // standard input/output library
 #include <stdlib.h>   // standard library (malloc, free, etc.)
 #include <time.h>     // time library (game logic timer and random seed)
+#include <unistd.h>   // UNIX standard library (fork, exec, etc.)
 
 #include "commonUtility.h"  // smaller utility functions which don't belong in any standalone module
 #include "sharedMemory.h"   //shared memory interfaces and functions (IPC)
@@ -25,6 +28,7 @@ static struct timespec startTime = {0};  // time when game started (used for cal
 static unsigned short flags_runtime = RUNTIME_NONE;
 static unsigned short flags_cmd = CMD_FLAG_NONE;
 static unsigned short flags_input = INPUT_NONE;
+pid_t pid_neurons = 0;  // process ID of neural network program (used for sending signals if game is managing the network)
 
 static char *cmd_shInputName = NULL;
 static char *cmd_shOutputName = NULL;
@@ -34,7 +38,7 @@ static struct sharedOutput_s *shOutput = NULL;
 static struct sharedState_s *shState = NULL;
 
 static bool gameOver = false;
-static bool pause = false;
+static bool gamePaused = false;
 static unsigned int score = 0;
 static unsigned short levelsCleared = 0;
 
@@ -99,7 +103,7 @@ int main(int argc, char *argv[]) {
                 cmd_shStateName = argv[i + 3];
                 i += 3;
 
-                printf("[DEBUG] Starting managed with input: %s, output: %s, state: %s\n", cmd_shInputName, cmd_shOutputName, cmd_shStateName);
+                // printf("[DEBUG] Starting managed with input: %s, output: %s, state: %s\n", cmd_shInputName, cmd_shOutputName, cmd_shStateName);
             } else {
                 printf("ERROR: Unknown command line argument: %s\n", argv[i]);
                 printf("Use %s --help for more information.\n", argv[0]);
@@ -143,7 +147,7 @@ int main(int argc, char *argv[]) {
         return 0;
     } else if (flags_cmd & CMD_FLAG_VERSION) {
         printf("Program:\t\tAsteroids-game\n");
-        printf("Version:\t\tDEV (P1.3)\n");
+        printf("Version:\t\tDEV (P2.0)\n");
         printf("Compiler version:\t%s\n", __VERSION__);
         printf("Raylib version:\t\t%s\n", RAYLIB_VERSION);
         printf("Compiled on %s at %s\n", __DATE__, __TIME__);
@@ -154,7 +158,7 @@ int main(int argc, char *argv[]) {
     if (flags_cmd & (CMD_FLAG_MANAGED | CMD_FLAG_USE_NEURAL)) {
         if (!cu_CStringIsAlphanumeric(cmd_shInputName + 1) ||
             !cu_CStringIsAlphanumeric(cmd_shOutputName + 1) ||
-            !cu_CStringIsAlphanumeric(cmd_shStateName + 1)) {
+            (cmd_shStateName != NULL && !cu_CStringIsAlphanumeric(cmd_shStateName + 1))) {
             // +1 to skip first character (which is a forward slash)
             printf("ERROR: Shared memory names can only contain alphanumeric characters.\n");
             return 1;
@@ -173,6 +177,33 @@ int main(int argc, char *argv[]) {
     InitGame();
     clock_gettime(CLOCK_MONOTONIC, &currentTime);
     startTime = currentTime;
+
+    if (flags_cmd & CMD_FLAG_STANDALONE && flags_cmd & CMD_FLAG_USE_NEURAL) {
+        // prepare arguments for neural network program
+        char *argvNeural[] = {"./bin/neurons", "-s", cmd_shInputName, cmd_shOutputName, NULL};
+
+        // fork process for neural network
+        pid_neurons = fork();
+        if (pid_neurons == 0) {
+            // child process
+            setsid();                                   // create new session for neural network process
+            int devNull = open("/dev/null", O_WRONLY);  // open /dev/null for writing
+            if (devNull == -1) {
+                printf("ERROR: Failed to open /dev/null for writing.\n");
+                exit(1);
+            }
+            dup2(devNull, STDOUT_FILENO);  // redirect stdout to /dev/null
+            close(devNull);                // close /dev/null
+            execv(argvNeural[0], argvNeural);
+            printf("ERROR: Failed to start neural network program.\n");
+            exit(1);
+        } else if (pid_neurons < 0) {
+            // error
+            printf("ERROR: Failed to fork neural network process.\n");
+            exit(1);
+        }
+    }
+
     //--------------------------------------------------------------------------------------
 
     // Main game loop
@@ -262,7 +293,7 @@ inline void UpdateSharedState(void) {
         // update shared state memory
         sm_lockSharedState(shState);
         shState->game_isOver = gameOver;
-        shState->game_isPaused = pause;
+        shState->game_isPaused = gamePaused;
         shState->game_gameScore = score;
         shState->game_gameLevel = levelsCleared;
         shState->game_gameTime = (currentTime.tv_sec - startTime.tv_sec);
@@ -364,7 +395,7 @@ inline void PregenAsteroids(void) {
 
 // initialize game variables
 void InitGame(void) {
-    pause = false;
+    gamePaused = false;
     score = 0;
     levelsCleared = 0;
 
@@ -402,13 +433,13 @@ void InitGame(void) {
     // initialization of asteroids
     PregenAsteroids();
 
-    startTime = currentTime; // NOTE: added to avoid game time not being reset after game restart
+    startTime = currentTime;  // NOTE: added to avoid game time not being reset after game restart
 }
 
 // update logic (one time step)
 void UpdateGame(void) {
     // update input flags (depending on run mode)
-    if (flags_cmd & CMD_FLAG_MANAGED || flags_cmd & CMD_FLAG_USE_NEURAL) {
+    if ((flags_cmd & CMD_FLAG_MANAGED || flags_cmd & CMD_FLAG_USE_NEURAL) && !gameOver) {
         UpdateSharedInput();
     } else if (flags_runtime & RUNTIME_WINDOW_ACTIVE) {
         flags_input |= IsKeyDown(KEY_W) ? INPUT_W : 0;
@@ -422,9 +453,9 @@ void UpdateGame(void) {
     }
 
     if (!gameOver) {
-        if (flags_input & INPUT_PAUSE) pause = !pause;
+        if (flags_input & INPUT_PAUSE) gamePaused = !gamePaused;
 
-        if (!pause) {
+        if (!gamePaused) {
             // Player logic: rotation
             if (flags_input & INPUT_A) player.rotation -= PLAYER_BASE_ROTATION * fixedTimeStep;
             if (flags_input & INPUT_D) player.rotation += PLAYER_BASE_ROTATION * fixedTimeStep;
@@ -603,6 +634,11 @@ void UpdateGame(void) {
         gameOver = false;
     }
 
+    // kill neural network process if game is managing it and game is over
+    if (flags_cmd & CMD_FLAG_STANDALONE && flags_cmd & CMD_FLAG_USE_NEURAL && gameOver) {
+        kill(pid_neurons, SIGTERM);
+    }
+
     // update output and state IPC (depending on run mode)
     UpdateSharedOutput();
     UpdateSharedState();
@@ -628,7 +664,7 @@ void DrawGame(void) {
             Meteor *asteroid = (Meteor *)xArray_get(asteroids, i);
             if (asteroid->active) {
                 DrawCircleLines(asteroid->position.x, asteroid->position.y, asteroid->radius, asteroid->color);
-                //DrawCircleV(asteroid->position, asteroid->radius, asteroid->color);
+                // DrawCircleV(asteroid->position, asteroid->radius, asteroid->color);
             } else {
                 DrawCircleV(asteroid->position, asteroid->radius, Fade(DARKGRAY, 0.3f));
             }
@@ -650,7 +686,7 @@ void DrawGame(void) {
         DrawText(TextFormat("LEVEL: %02i", levelsCleared + 1), 20, 40, 20, WHITE);
         DrawText(TextFormat("TIME: %02i:%02i", (int)(currentTime.tv_sec - startTime.tv_sec) / 60, (int)(currentTime.tv_sec - startTime.tv_sec) % 60), 20, 60, 20, WHITE);
 
-        if (pause) DrawText("GAME PAUSED", screenWidth / 2 - MeasureText("GAME PAUSED", 40) / 2, screenHeight / 2 - 40, 40, WHITE);
+        if (gamePaused) DrawText("GAME PAUSED", screenWidth / 2 - MeasureText("GAME PAUSED", 40) / 2, screenHeight / 2 - 40, 40, WHITE);
     } else {
         DrawText("GAME OVER", GetScreenWidth() / 2 - MeasureText("GAME OVER", 20) / 2, GetScreenHeight() / 2 - 50, 20, WHITE);
         if (flags_runtime & RUNTIME_WINDOW_ACTIVE && !(flags_cmd & CMD_FLAG_USE_NEURAL || flags_cmd & CMD_FLAG_MANAGED)) {
