@@ -493,7 +493,7 @@ void UpdateGame(void) {
                     if (!shoot[i].active) {
                         shoot[i].position = (Vector2){player.position.x + cosf(player.rotation) * (shipHeight), player.position.y + sinf(player.rotation) * (shipHeight)};
                         shoot[i].active = true;
-                        shoot[i].speed = Vector2Scale((Vector2){cosf(player.rotation), sinf(player.rotation)}, BULLET_SPEED);
+                        shoot[i].speed = Vector2Scale((Vector2){cosf(player.rotation), sinf(player.rotation)}, BULLET_SPEED + Vector2Length(player.speed));
                         shoot[i].rotation = player.rotation;
                         fireCooldown = FIRE_COOLDOWN;
                         break;
