@@ -110,7 +110,7 @@ typedef struct asteroid_s {
 #define ASTEROID_SPEED 100                // asteroid base speed in pixels per second
 #define ASTEROID_BASE_GENERATION_COUNT 4  // number of asteroids generated at game start
 
-#define BULLET_LIFETIME 80   // bullet lifespan in frames
+#define BULLET_LIFETIME 60   // bullet lifespan in frames
 #define BULLET_SPEED 500.0f  // bullet speed in pixels per second
 #define FIRE_COOLDOWN 0.15f  // time between shots in seconds
 

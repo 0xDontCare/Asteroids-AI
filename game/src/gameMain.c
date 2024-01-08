@@ -326,14 +326,14 @@ inline void UpdateSharedOutput(void) {
     if (flags_cmd & CMD_FLAG_USE_NEURAL || flags_cmd & CMD_FLAG_MANAGED) {
         // update shared output memory
         sm_lockSharedOutput(shOutput);
-        shOutput->playerPosX = player.position.x;
-        shOutput->playerPosY = player.position.y;
-        shOutput->playerRotation = player.rotation;
-        shOutput->playerSpeedX = player.speed.x;
-        shOutput->playerSpeedY = player.speed.y;
-        shOutput->distanceFront = distanceFront;
-        shOutput->closestAsteroidPosX = closestAsteroid.x;
-        shOutput->closestAsteroidPosY = closestAsteroid.y;
+        shOutput->gameOutput01 = player.position.x;  // passing player position to neural network
+        shOutput->gameOutput02 = player.position.y;  //
+        shOutput->gameOutput03 = player.rotation;    // passing player absolute rotation to neural network
+        shOutput->gameOutput04 = player.speed.x;     // passing player speed to neural network
+        shOutput->gameOutput05 = player.speed.y;     //
+        shOutput->gameOutput06 = distanceFront;      // passing distance to obstacle in front of player to neural network
+        shOutput->gameOutput07 = closestAsteroid.x;  // passing closest asteroid position to neural network
+        shOutput->gameOutput08 = closestAsteroid.y;  //
         sm_unlockSharedOutput(shOutput);
     }
     return;
@@ -364,7 +364,7 @@ inline void PregenAsteroids(void) {
 
         newAsteroid->sizeClass = 3;  // all asteroids are large initially
         while (!validRange) {
-            if ((posx > screenWidth / 2 - 150 && posx < screenWidth / 2 + 150) || (fabsf(player.position.x - posx) < 50.f)) {
+            if ((posx > screenWidth / 2 - 150 && posx < screenWidth / 2 + 150) || (fabsf(player.position.x - posx) < 20.f)) {
                 // asteroid is too close to screen edge or player
                 posx = GetRandomValue(0, screenWidth);
             } else {
@@ -373,7 +373,7 @@ inline void PregenAsteroids(void) {
         }
         validRange = false;
         while (!validRange) {
-            if ((posy > screenHeight / 2 - 150 && posy < screenHeight / 2 + 150) || (fabsf(player.position.y - posy) < 50.f)) {
+            if ((posy > screenHeight / 2 - 150 && posy < screenHeight / 2 + 150) || (fabsf(player.position.y - posy) < 20.f)) {
                 // asteroid is too close to screen edge or player
                 posy = GetRandomValue(0, screenHeight);
             } else {
@@ -514,18 +514,14 @@ void UpdateGame(void) {
 
                     // Collision logic: bullet vs walls
                     if (bullet[i].position.x > screenWidth + bullet[i].radius) {
-                        bullet[i].active = false;
-                        bullet[i].lifeSpawn = 0;
+                        bullet[i].position.x = -(bullet[i].radius);
                     } else if (bullet[i].position.x < 0 - bullet[i].radius) {
-                        bullet[i].active = false;
-                        bullet[i].lifeSpawn = 0;
+                        bullet[i].position.x = screenWidth + bullet[i].radius;
                     }
                     if (bullet[i].position.y > screenHeight + bullet[i].radius) {
-                        bullet[i].active = false;
-                        bullet[i].lifeSpawn = 0;
+                        bullet[i].position.y = -(bullet[i].radius);
                     } else if (bullet[i].position.y < 0 - bullet[i].radius) {
-                        bullet[i].active = false;
-                        bullet[i].lifeSpawn = 0;
+                        bullet[i].position.y = screenHeight + bullet[i].radius;
                     }
 
                     // Life of bullet
@@ -578,7 +574,7 @@ void UpdateGame(void) {
                         bullet[i].active = false;
                         bullet[i].lifeSpawn = 0;
                         asteroid->active = false;
-                        score += (asteroid->sizeClass == 3) ? 20 : (asteroid->sizeClass == 2) ? 50
+                        score += (asteroid->sizeClass == 3) ? 25 : (asteroid->sizeClass == 2) ? 50
                                                                                               : 100;
                         destroyedMeteorsCount++;
 

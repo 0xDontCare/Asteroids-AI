@@ -32,14 +32,14 @@ struct sharedInput_s {
 
 struct sharedOutput_s {
     pthread_mutex_t mutex;
-    float playerPosX;
-    float playerPosY;
-    float playerRotation;
-    float playerSpeedX;
-    float playerSpeedY;
-    float distanceFront;
-    float closestAsteroidPosX;
-    float closestAsteroidPosY;
+    float gameOutput01;
+    float gameOutput02;
+    float gameOutput03;
+    float gameOutput04;
+    float gameOutput05;
+    float gameOutput06;
+    float gameOutput07;
+    float gameOutput08;
 };
 
 struct sharedState_s {

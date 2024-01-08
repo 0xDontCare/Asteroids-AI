@@ -45,6 +45,6 @@ enum neuronsRuntime_e {
 
 // ------------------------------------------------------------------
 // neural network constant definitions
-#define ACTIVATION_THRESHOLD 0.5f  // threshold for binary activation of network output
+#define ACTIVATION_THRESHOLD 0.95f  // threshold for binary activation of network output
 
 #endif  // MAIN_H

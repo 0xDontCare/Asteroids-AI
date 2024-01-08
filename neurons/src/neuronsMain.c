@@ -29,10 +29,10 @@ static unsigned short flags_cmd = CMD_FLAG_NONE;  // command line argument flags
 // static unsigned short flags_input;    // game input flags (W, A, D, SPACE)
 static unsigned short flags_runtime;  // program runtime flags (running, paused, exit, etc.)
 
-xMatrix *weights1 = NULL;      // input(8) -> hidden layer(32)
-xMatrix *weights2 = NULL;      // hidden layer(32) -> output(4)
-xMatrix *bias1 = NULL;         // bias for hidden layer (1x32)
-xMatrix *bias2 = NULL;         // bias for output layer (1x4)
+xMatrix *weights1 = NULL;  // input(8) -> hidden layer(32)
+xMatrix *weights2 = NULL;  // hidden layer(32) -> output(4)
+xMatrix *bias1 = NULL;     // bias for hidden layer (1x32)
+xMatrix *bias2 = NULL;     // bias for output layer (1x4)
 
 xMatrix *input = NULL;         // input matrix (1x8)
 xMatrix *intermediate = NULL;  // intermediate matrix (1x32)
@@ -49,7 +49,8 @@ static inline void UpdateSharedOutput(void);                     // update outpu
 static void fillUniform(xMatrix *mat, float min, float max);     // fill matrix with random values in from uniform distribution
 static float normalRandom(float mean, float stddev);             // generate normally distributed random number (using Box-Muller transform)
 static void fillNormal(xMatrix *mat, float mean, float stddev);  // fill matrix with random values from normal distribution
-static inline float activation(float x);                         // neural network activation function
+static inline float sigmoid(float x);                            // neural network sigmoid function
+static inline float reLU(float x);                               // neural network reLU activation function
 static inline void InitNeurons(void);                            // initialize neural network
 static inline void UpdateNeurons(void);                          // update neural network (one frame)
 static inline void UnloadNeurons(void);                          // unload dynamic structures of neural network
@@ -184,7 +185,7 @@ int main(int argc, char *argv[]) {
     InitNeurons();
 
     // neural network main loop
-    while(!(flags_runtime & RUNTIME_EXIT)) {
+    while (!(flags_runtime & RUNTIME_EXIT)) {
         UpdateNeurons();
     }
 
@@ -281,14 +282,14 @@ inline void UpdateSharedOutput(void) {
 
     // update values to input matrix
     sm_lockSharedOutput(shOutput);
-    xMatrix_set(input, 0, 0, shOutput->playerPosX);
-    xMatrix_set(input, 0, 1, shOutput->playerPosY);
-    xMatrix_set(input, 0, 2, shOutput->playerRotation);
-    xMatrix_set(input, 0, 3, shOutput->playerSpeedX);
-    xMatrix_set(input, 0, 4, shOutput->playerSpeedY);
-    xMatrix_set(input, 0, 5, shOutput->distanceFront);
-    xMatrix_set(input, 0, 6, shOutput->closestAsteroidPosX);
-    xMatrix_set(input, 0, 7, shOutput->closestAsteroidPosY);
+    xMatrix_set(input, 0, 0, shOutput->gameOutput01);
+    xMatrix_set(input, 0, 1, shOutput->gameOutput02);
+    xMatrix_set(input, 0, 2, shOutput->gameOutput03);
+    xMatrix_set(input, 0, 3, shOutput->gameOutput04);
+    xMatrix_set(input, 0, 4, shOutput->gameOutput05);
+    xMatrix_set(input, 0, 5, shOutput->gameOutput06);
+    xMatrix_set(input, 0, 6, shOutput->gameOutput07);
+    xMatrix_set(input, 0, 7, shOutput->gameOutput08);
     sm_unlockSharedOutput(shOutput);
 
     return;
@@ -340,9 +341,14 @@ float normalRandom(float mean, float stddev) {
     }
 }
 
-// sigmoid activation function
-inline float activation(float x) {
+// sigmoid sigmoid function
+inline float sigmoid(float x) {
     return 1.0f / (1.0f + expf(-x));
+}
+
+// reLU activation function
+inline float reLU(float x) {
+    return (x > 0.0f) ? x : 0.0f;
 }
 
 // initialize neural network program
@@ -402,10 +408,10 @@ inline void UpdateNeurons(void) {
     xMatrix_dot(intermediate, input, weights1);
     xMatrix_add(intermediate, intermediate, bias1);
 
-    // apply activation function to intermediate matrix
+    // apply sigmoid function to intermediate matrix
     for (int i = 0; i < intermediate->rows; i++) {
         for (int j = 0; j < intermediate->cols; j++) {
-            xMatrix_set(intermediate, i, j, activation(xMatrix_get(intermediate, i, j)));
+            xMatrix_set(intermediate, i, j, reLU(xMatrix_get(intermediate, i, j)));
         }
     }
 
@@ -413,10 +419,10 @@ inline void UpdateNeurons(void) {
     xMatrix_dot(output, intermediate, weights2);
     xMatrix_add(output, output, bias2);
 
-    // apply activation function to output matrix
+    // apply sigmoid function to output matrix
     for (int i = 0; i < output->rows; i++) {
         for (int j = 0; j < output->cols; j++) {
-            xMatrix_set(output, i, j, activation(xMatrix_get(output, i, j)));
+            xMatrix_set(output, i, j, sigmoid(xMatrix_get(output, i, j)));
         }
     }
 

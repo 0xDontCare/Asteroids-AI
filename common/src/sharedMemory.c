@@ -176,14 +176,15 @@ void sm_initSharedOutput(struct sharedOutput_s *sharedOutput) {
     pthread_mutex_init(&sharedOutput->mutex, &mutexAttr);
     pthread_mutexattr_destroy(&mutexAttr);
 
-    sharedOutput->playerPosX = 0;
-    sharedOutput->playerPosY = 0;
-    sharedOutput->playerRotation = 0;
-    sharedOutput->playerSpeedX = 0;
-    sharedOutput->playerSpeedY = 0;
-    sharedOutput->distanceFront = 0;
-    sharedOutput->closestAsteroidPosX = 0;
-    sharedOutput->closestAsteroidPosY = 0;
+    sharedOutput->gameOutput01 = 0.f;    
+    sharedOutput->gameOutput02 = 0.f;
+    sharedOutput->gameOutput03 = 0.f;
+    sharedOutput->gameOutput04 = 0.f;
+    sharedOutput->gameOutput05 = 0.f;
+    sharedOutput->gameOutput06 = 0.f;
+    sharedOutput->gameOutput07 = 0.f;
+    sharedOutput->gameOutput08 = 0.f;
+
 }
 
 void sm_freeSharedOutput(struct sharedOutput_s *sharedOutput, const char *sharedMemoryName) {
