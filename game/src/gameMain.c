@@ -46,7 +46,7 @@ static unsigned short levelsCleared = 0;
 static float shipHeight = 0.0f;
 
 static Player player = {0};
-static Shoot shoot[PLAYER_MAX_BULLETS] = {0};
+static Bullet bullet[PLAYER_MAX_BULLETS] = {0};
 static xArray *asteroids = NULL;
 static Vector2 closestAsteroid = {0};
 static float distanceFront = 0.0f;
@@ -352,7 +352,7 @@ inline void PregenAsteroids(void) {
     // generate new asteroids
     for (int i = 0; i < ASTEROID_BASE_GENERATION_COUNT + levelsCleared; i++) {
         // allocating new asteroid
-        Meteor *newAsteroid = malloc(sizeof(Meteor));
+        Asteroid *newAsteroid = malloc(sizeof(Asteroid));
         if (newAsteroid == NULL) {
             printf("ERROR: Failed to allocate memory for new asteroid.\n");
             exit(1);
@@ -422,12 +422,12 @@ void InitGame(void) {
 
     // initialization of bullets
     for (int i = 0; i < PLAYER_MAX_BULLETS; i++) {
-        shoot[i].position = (Vector2){0, 0};
-        shoot[i].speed = (Vector2){0, 0};
-        shoot[i].radius = 2;
-        shoot[i].active = false;
-        shoot[i].lifeSpawn = 0;
-        shoot[i].color = WHITE;
+        bullet[i].position = (Vector2){0, 0};
+        bullet[i].speed = (Vector2){0, 0};
+        bullet[i].radius = 2;
+        bullet[i].active = false;
+        bullet[i].lifeSpawn = 0;
+        bullet[i].color = WHITE;
     }
 
     // initialization of asteroids
@@ -484,56 +484,56 @@ void UpdateGame(void) {
             else if (player.position.y < -(shipHeight))
                 player.position.y = screenHeight + shipHeight;
 
-            // Player shoot cooldown logic
+            // Player bullet cooldown logic
             if (fireCooldown > 0.0f) fireCooldown -= 1.0f * fixedTimeStep;
 
-            // Player shoot logic
+            // Player bullet logic
             if (flags_input & INPUT_SPACE && fireCooldown <= 0.0f) {
                 for (int i = 0; i < PLAYER_MAX_BULLETS; i++) {
-                    if (!shoot[i].active) {
-                        shoot[i].position = (Vector2){player.position.x + cosf(player.rotation) * (shipHeight), player.position.y + sinf(player.rotation) * (shipHeight)};
-                        shoot[i].active = true;
-                        shoot[i].speed = Vector2Scale((Vector2){cosf(player.rotation), sinf(player.rotation)}, BULLET_SPEED + Vector2Length(player.speed));
-                        shoot[i].rotation = player.rotation;
+                    if (!bullet[i].active) {
+                        bullet[i].position = (Vector2){player.position.x + cosf(player.rotation) * (shipHeight), player.position.y + sinf(player.rotation) * (shipHeight)};
+                        bullet[i].active = true;
+                        bullet[i].speed = Vector2Scale((Vector2){cosf(player.rotation), sinf(player.rotation)}, BULLET_SPEED + Vector2Length(player.speed));
+                        bullet[i].rotation = player.rotation;
                         fireCooldown = FIRE_COOLDOWN;
                         break;
                     }
                 }
             }
 
-            // Shoot life timer
+            // Bullet life timer
             for (int i = 0; i < PLAYER_MAX_BULLETS; i++) {
-                if (shoot[i].active) shoot[i].lifeSpawn++;
+                if (bullet[i].active) bullet[i].lifeSpawn++;
             }
 
             // Shot logic
             for (int i = 0; i < PLAYER_MAX_BULLETS; i++) {
-                if (shoot[i].active) {
+                if (bullet[i].active) {
                     // Movement
-                    shoot[i].position = Vector2Add(shoot[i].position, Vector2Scale(shoot[i].speed, fixedTimeStep));
+                    bullet[i].position = Vector2Add(bullet[i].position, Vector2Scale(bullet[i].speed, fixedTimeStep));
 
-                    // Collision logic: shoot vs walls
-                    if (shoot[i].position.x > screenWidth + shoot[i].radius) {
-                        shoot[i].active = false;
-                        shoot[i].lifeSpawn = 0;
-                    } else if (shoot[i].position.x < 0 - shoot[i].radius) {
-                        shoot[i].active = false;
-                        shoot[i].lifeSpawn = 0;
+                    // Collision logic: bullet vs walls
+                    if (bullet[i].position.x > screenWidth + bullet[i].radius) {
+                        bullet[i].active = false;
+                        bullet[i].lifeSpawn = 0;
+                    } else if (bullet[i].position.x < 0 - bullet[i].radius) {
+                        bullet[i].active = false;
+                        bullet[i].lifeSpawn = 0;
                     }
-                    if (shoot[i].position.y > screenHeight + shoot[i].radius) {
-                        shoot[i].active = false;
-                        shoot[i].lifeSpawn = 0;
-                    } else if (shoot[i].position.y < 0 - shoot[i].radius) {
-                        shoot[i].active = false;
-                        shoot[i].lifeSpawn = 0;
+                    if (bullet[i].position.y > screenHeight + bullet[i].radius) {
+                        bullet[i].active = false;
+                        bullet[i].lifeSpawn = 0;
+                    } else if (bullet[i].position.y < 0 - bullet[i].radius) {
+                        bullet[i].active = false;
+                        bullet[i].lifeSpawn = 0;
                     }
 
-                    // Life of shoot
-                    if (shoot[i].lifeSpawn >= BULLET_LIFETIME) {
-                        shoot[i].position = (Vector2){0, 0};
-                        shoot[i].speed = (Vector2){0, 0};
-                        shoot[i].lifeSpawn = 0;
-                        shoot[i].active = false;
+                    // Life of bullet
+                    if (bullet[i].lifeSpawn >= BULLET_LIFETIME) {
+                        bullet[i].position = (Vector2){0, 0};
+                        bullet[i].speed = (Vector2){0, 0};
+                        bullet[i].lifeSpawn = 0;
+                        bullet[i].active = false;
                     }
                 }
             }
@@ -541,7 +541,7 @@ void UpdateGame(void) {
             // asteroid logic
             player.collider = (Vector3){player.position.x + cosf(player.rotation) * (shipHeight / 2.5f), player.position.y + sinf(player.rotation) * (shipHeight / 2.5f), 12};
             for (int i = 0; i < asteroids->size; i++) {
-                Meteor *asteroid = (Meteor *)xArray_get(asteroids, i);
+                Asteroid *asteroid = (Asteroid *)xArray_get(asteroids, i);
                 if (!asteroid->active) continue;
 
                 // collision logic: player vs asteroids
@@ -568,15 +568,15 @@ void UpdateGame(void) {
 
             // Collision logic: bullets vs asteroids
             for (int i = 0; i < PLAYER_MAX_BULLETS; i++) {
-                if (!shoot[i].active) continue;
+                if (!bullet[i].active) continue;
 
                 for (int j = 0; j < asteroids->size; j++) {
-                    Meteor *asteroid = (Meteor *)xArray_get(asteroids, j);
+                    Asteroid *asteroid = (Asteroid *)xArray_get(asteroids, j);
                     if (!asteroid->active) continue;
 
-                    if (CheckCollisionCircles(shoot[i].position, shoot[i].radius, asteroid->position, asteroid->radius)) {
-                        shoot[i].active = false;
-                        shoot[i].lifeSpawn = 0;
+                    if (CheckCollisionCircles(bullet[i].position, bullet[i].radius, asteroid->position, asteroid->radius)) {
+                        bullet[i].active = false;
+                        bullet[i].lifeSpawn = 0;
                         asteroid->active = false;
                         score += (asteroid->sizeClass == 3) ? 20 : (asteroid->sizeClass == 2) ? 50
                                                                                               : 100;
@@ -586,7 +586,7 @@ void UpdateGame(void) {
                         if (asteroid->sizeClass > 1) {
                             for (int k = 0; k < 2; k++) {
                                 // allocating new asteroid
-                                Meteor *newAsteroid = malloc(sizeof(Meteor));
+                                Asteroid *newAsteroid = malloc(sizeof(Asteroid));
                                 if (newAsteroid == NULL) {
                                     printf("ERROR: Failed to allocate memory for new asteroid.\n");
                                     exit(1);
@@ -595,7 +595,7 @@ void UpdateGame(void) {
                                 // setting asteroid properties
                                 newAsteroid->sizeClass = asteroid->sizeClass - 1;
                                 newAsteroid->position = (Vector2){asteroid->position.x, asteroid->position.y};
-                                newAsteroid->speed = (Vector2){sinf(shoot[i].rotation) * ASTEROID_SPEED * (k == 0 ? -(4 - newAsteroid->sizeClass) : (4 - newAsteroid->sizeClass)), cosf(shoot[i].rotation) * ASTEROID_SPEED * (k == 0 ? (4 - newAsteroid->sizeClass) : -(4 - newAsteroid->sizeClass))};
+                                newAsteroid->speed = (Vector2){sinf(bullet[i].rotation) * ASTEROID_SPEED * (k == 0 ? -(4 - newAsteroid->sizeClass) : (4 - newAsteroid->sizeClass)), cosf(bullet[i].rotation) * ASTEROID_SPEED * (k == 0 ? (4 - newAsteroid->sizeClass) : -(4 - newAsteroid->sizeClass))};
                                 newAsteroid->radius = AsteroidRadius(newAsteroid->sizeClass + 2);
                                 newAsteroid->active = true;
                                 newAsteroid->color = WHITE;
@@ -612,7 +612,7 @@ void UpdateGame(void) {
             // calculating closest asteroid
             float minDistance = screenWidth * screenHeight;
             for (int i = 0; i < asteroids->size; i++) {
-                Meteor *asteroid = (Meteor *)xArray_get(asteroids, i);
+                Asteroid *asteroid = (Asteroid *)xArray_get(asteroids, i);
                 if (!asteroid->active) continue;
 
                 float tmpDistance = Vector2Distance(player.position, asteroid->position);
@@ -661,7 +661,7 @@ void DrawGame(void) {
 
         // Draw asteroids
         for (int i = 0; i < asteroids->size; i++) {
-            Meteor *asteroid = (Meteor *)xArray_get(asteroids, i);
+            Asteroid *asteroid = (Asteroid *)xArray_get(asteroids, i);
             if (asteroid->active) {
                 DrawCircleLines(asteroid->position.x, asteroid->position.y, asteroid->radius, asteroid->color);
                 // DrawCircleV(asteroid->position, asteroid->radius, asteroid->color);
@@ -670,9 +670,9 @@ void DrawGame(void) {
             }
         }
 
-        // Draw shoot
+        // Draw bullet
         for (int i = 0; i < PLAYER_MAX_BULLETS; i++) {
-            if (shoot[i].active) DrawCircleV(shoot[i].position, shoot[i].radius, shoot[i].color);
+            if (bullet[i].active) DrawCircleV(bullet[i].position, bullet[i].radius, bullet[i].color);
         }
 
         // DEBUG: Drawing colliders, closest asteroid and distance from player to closest asteroid

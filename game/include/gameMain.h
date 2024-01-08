@@ -89,7 +89,7 @@ typedef struct bullet_s {
     int lifeSpawn;     // lifespan in frames
     bool active;       // is active (not destroyed/dead)
     Color color;       // render color
-} Shoot;
+} Bullet;
 
 // asteroid game object descriptor
 typedef struct asteroid_s {
@@ -99,7 +99,7 @@ typedef struct asteroid_s {
     float radius;      // collision radius
     bool active;       // is active (not destroyed)
     Color color;       // render color
-} Meteor;
+} Asteroid;
 
 // game constant definitions
 #define PLAYER_BASE_SIZE 20.0f           // player base size in pixels
