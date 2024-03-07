@@ -1,398 +1,389 @@
 #include "xLinear.h"
 
+#include <stdint.h>
 #include <stdlib.h>
 
-xMatrix *xMatrix_new(int rows, int cols) {
-    xMatrix *mat = malloc(sizeof(xMatrix));
+xMatrix *xMatrix_new(uint32_t rows, uint32_t cols)
+{
+  // dimension checking
+  if (rows == 0 || cols == 0 || rows > UINT32_MAX / cols || cols > UINT32_MAX / rows)
+  {
+    return NULL;
+  }
 
-    // if we failed to allocate matrix
-    if (mat == NULL) {
-        return NULL;
-    }
+  // matrix allocation
+  xMatrix *mat = (xMatrix *)malloc(sizeof(xMatrix));
+  if (mat == NULL)
+  {
+    return NULL;
+  }
 
-    mat->rows = rows;
-    mat->cols = cols;
-    mat->data = (float **)malloc(rows * sizeof(float *));
-
-    // if we failed to allocate rows
-    if (mat->data == NULL) {
-        return NULL;
-    }
-
-    for (int i = 0; i < rows; i++) {
-        mat->data[i] = (float *)calloc(cols, sizeof(float));  // automatically assigned to 0
-
-        // if we failed to allocate columns in some row
-        if (mat->data[i] == NULL) {
-            for (int j = 0; j < i; j++) {
-                free(mat->data[i]);
-            }
-            free(mat->data);
-            free(mat);
-            return NULL;
-        }
-    }
-
-    return mat;
-}
-
-void xMatrix_free(xMatrix *mat) {
-    for (int i = 0; i < mat->rows; i++) {
-        free(mat->data[i]);
-    }
-    free(mat->data);
+  // data allocation
+  mat->data = (float *)calloc(rows * cols, sizeof(float));
+  if (mat->data == NULL)
+  {
     free(mat);
-    mat = NULL;
+    return NULL;
+  }
+
+  // matrix initialization
+  mat->rows = rows;
+  mat->cols = cols;
+
+  return mat;
 }
 
-xMatrix *xMatrix_slice(xMatrix *mat, int row_start, int row_end, int col_start, int col_end) {
-    // validate index bounds
-    if (row_start < 0 || row_end >= mat->rows || row_start >= row_end || col_start < 0 || col_end >= mat->cols || col_start >= col_end) {
-        return NULL;
-    }
-
-    xMatrix *retMatrix = xMatrix_new(row_end - row_start, col_end - col_start);
-    // check if matrix is successfully allocated
-    if (retMatrix == NULL) {
-        return NULL;
-    }
-
-    for (int i = row_start; i < row_end; i++) {
-        for (int j = col_start; j < col_end; j++) {
-            retMatrix->data[i - row_start][j - col_start] = mat->data[i][j];
-        }
-    }
-
-    return retMatrix;
+void xMatrix_free(xMatrix *mat)
+{
+  free(mat->data);
+  free(mat);
 }
 
-xMatrix *xMatrix_identity(int dim) {
-    xMatrix *mat = xMatrix_new(dim, dim);
-    // check if matrix is successfully allocated
-    if (mat == NULL) {
-        return NULL;
-    }
+xMatrix *xMatrix_slice(xMatrix *mat, uint32_t row_start, uint32_t row_end, uint32_t col_start,
+                       uint32_t col_end)
+{
+  // bound checking
+  if (row_start >= row_end || col_start >= col_end)
+  {
+    return NULL;
+  }
 
-    for (int i = 0; i < dim; i++) {
-        mat->data[i][i] = 1;
-    }
+  // matrix allocation
+  xMatrix *res = xMatrix_new(row_end - row_start, col_end - col_start);
+  if (res == NULL)
+  {
+    return NULL;
+  }
 
-    return mat;
+  // value copy
+  for (uint32_t i = row_start; i < row_end; i++)
+  {
+    for (uint32_t j = col_start; j < col_end; j++)
+    {
+      xMatrix_set(res, i - row_start, j - col_start, xMatrix_get(mat, i, j));
+    }
+  }
+
+  return res;
 }
 
-xMatrix *xMatrix_row(xMatrix *mat, int rowIndex) {
-    // validate index bounds
-    if (rowIndex >= mat->rows) {
-        return NULL;
-    }
+xMatrix *xMatrix_identity(uint32_t dim)
+{
+  // matrix allocation
+  xMatrix *res = xMatrix_new(dim, dim);
+  if (res == NULL)
+  {
+    return NULL;
+  }
 
-    xMatrix *row = xMatrix_new(1, mat->cols);
-    // check if matrix is successfully allocated
-    if (row == NULL) {
-        return NULL;
-    }
+  // value initialization
+  for (uint32_t i = 0; i < dim; i++)
+  {
+    xMatrix_set(res, i, i, 1.0f);
+  }
 
-    for (int i = 0; i < mat->cols; i++) {
-        row->data[0][i] = mat->data[rowIndex][i];
-    }
-
-    return row;
+  return res;
 }
 
-xMatrix *xMatrix_col(xMatrix *mat, int colIndex) {
-    // validate index bounds
-    if (colIndex >= mat->cols) {
-        return NULL;
-    }
+xMatrix *xMatrix_row(xMatrix *mat, uint32_t rowIndex)
+{
+  // matrix allocation
+  xMatrix *res = xMatrix_new(1, mat->cols);
+  if (res == NULL)
+  {
+    return NULL;
+  }
 
-    xMatrix *col = xMatrix_new(mat->rows, 1);
-    // check if matrix is successfully allocated
-    if (col == NULL) {
-        return NULL;
-    }
+  // value copy
+  for (uint32_t i = 0; i < mat->cols; i++)
+  {
+    xMatrix_set(res, 0, i, xMatrix_get(mat, rowIndex, i));
+  }
 
-    for (int i = 0; i < mat->rows; i++) {
-        col->data[i][0] = mat->data[i][colIndex];
-    }
-
-    return col;
+  return res;
 }
 
-void xMatrix_add(xMatrix *res, xMatrix *mat1, xMatrix *mat2) {
-    // check matrix dimensions
-    if (mat1->rows != mat2->rows || mat1->cols != mat2->cols || res->rows != mat1->rows || res->cols != mat1->cols) {
-        return;
-    }
+xMatrix *xMatrix_col(xMatrix *mat, uint32_t colIndex)
+{
+  // matrix allocation
+  xMatrix *res = xMatrix_new(mat->rows, 1);
+  if (res == NULL)
+  {
+    return NULL;
+  }
 
-    // check if matrix data is not NULL
-    if (res->data == NULL || mat1->data == NULL || mat2->data == NULL) {
-        return;
-    }
+  // value copy
+  for (uint32_t i = 0; i < mat->rows; i++)
+  {
+    xMatrix_set(res, i, 0, xMatrix_get(mat, i, colIndex));
+  }
 
-    // calculate matrix sum
-    for (int i = 0; i < res->rows; i++) {
-        for (int j = 0; j < res->cols; j++) {
-            res->data[i][j] = mat1->data[i][j] + mat2->data[i][j];
-        }
-    }
+  return res;
 }
 
-void xMatrix_sub(xMatrix *res, xMatrix *mat1, xMatrix *mat2) {
-    // check matrix dimensions
-    if (mat1->rows != mat2->rows || mat1->cols != mat2->cols || res->rows != mat1->rows || res->cols != mat1->cols) {
-        return;
-    }
+void xMatrix_add(xMatrix *res, xMatrix *mat1, xMatrix *mat2)
+{
+  // pointer checking
+  if (res == NULL || mat1 == NULL || mat2 == NULL)
+  {
+    return;
+  }
 
-    // check if matrix data is not NULL
-    if (res->data == NULL || mat1->data == NULL || mat2->data == NULL) {
-        return;
-    }
+  // dimension checking
+  if (res->rows != mat1->rows || res->rows != mat2->rows || res->cols != mat1->cols ||
+      res->cols != mat2->cols)
+  {
+    return;
+  }
 
-    // calculate matrix difference
-    for (int i = 0; i < res->rows; i++) {
-        for (int j = 0; j < res->cols; j++) {
-            res->data[i][j] = mat1->data[i][j] - mat2->data[i][j];
-        }
+  // value addition
+  for (uint32_t i = 0; i < res->rows; i++)
+  {
+    for (uint32_t j = 0; j < res->cols; j++)
+    {
+      xMatrix_set(res, i, j, xMatrix_get(mat1, i, j) + xMatrix_get(mat2, i, j));
     }
+  }
+
+  return;
 }
 
-void xMatrix_dot(xMatrix *res, xMatrix *mat1, xMatrix *mat2) {
-    // check if res matrix is not any of the input matrices
-    if (res == mat1 || res == mat2) {
-        return;
-    }
+void xMatrix_sub(xMatrix *res, xMatrix *mat1, xMatrix *mat2)
+{
+  // pointer checking
+  if (res == NULL || mat1 == NULL || mat2 == NULL)
+  {
+    return;
+  }
 
-    // check if matrix dimensions are valid
-    if (mat1->cols != mat2->rows || res->rows != mat1->rows || res->cols != mat2->cols) {
-        return;
-    }
+  // dimension checking
+  if (res->rows != mat1->rows || res->rows != mat2->rows || res->cols != mat1->cols ||
+      res->cols != mat2->cols)
+  {
+    return;
+  }
 
-    // check if matrix data is not NULL
-    if (res->data == NULL || mat1->data == NULL || mat2->data == NULL) {
-        return;
+  // value subtraction
+  for (uint32_t i = 0; i < res->rows; i++)
+  {
+    for (uint32_t j = 0; j < res->cols; j++)
+    {
+      xMatrix_set(res, i, j, xMatrix_get(mat1, i, j) - xMatrix_get(mat2, i, j));
     }
+  }
 
-    // calculate matrix product
-    for (int i = 0; i < mat1->rows; i++) {
-        for (int j = 0; j < mat2->cols; j++) {
-            for (int k = 0; k < mat1->cols; k++) {
-                res->data[i][j] += mat1->data[i][k] * mat2->data[k][j];
-            }
-        }
-    }
+  return;
 }
 
-void xMatrix_transpose(xMatrix *mat) {
-    // check if matrix is not NULL
-    if (mat == NULL) {
-        return;
-    }
+void xMatrix_dot(xMatrix *res, xMatrix *mat1, xMatrix *mat2)
+{
+  // pointer checking
+  if (res == NULL || mat1 == NULL || mat2 == NULL || res == mat1 || res == mat2)
+  {
+    return;
+  }
 
-    xMatrix *transposed = xMatrix_new(mat->cols, mat->rows);
-    // check if matrix is successfully allocated
-    if (transposed == NULL) {
-        return;
-    }
+  // dimension checking
+  if (res->rows != mat1->rows || res->cols != mat2->cols || mat1->cols != mat2->rows)
+  {
+    return;
+  }
 
-    // assign values to new matrix
-    for (int i = 0; i < mat->rows; i++) {
-        for (int j = 0; j < mat->cols; j++) {
-            transposed->data[j][i] = mat->data[i][j];
-        }
+  // matrix multiplication
+  for (uint32_t i = 0; i < res->rows; i++)
+  {
+    for (uint32_t j = 0; j < res->cols; j++)
+    {
+      float sum = 0.0f;
+      for (uint32_t k = 0; k < mat1->cols; k++)
+      {
+        sum += xMatrix_get(mat1, i, k) * xMatrix_get(mat2, k, j);
+      }
+      xMatrix_set(res, i, j, sum);
     }
+  }
 
-    // free old matrix and swap with new one
-    xMatrix_free(mat);
-    mat = transposed;
+  return;
 }
 
-void xMatrix_scale(xMatrix *mat, float scale) {
-    // check if matrix is not NULL
-    if (mat == NULL) {
-        return;
-    }
+void xMatrix_transpose(xMatrix *mat)
+{
+  // pointer checking
+  if (mat == NULL)
+  {
+    return;
+  }
 
-    for (int i = 0; i < mat->rows; i++) {
-        for (int j = 0; j < mat->cols; j++) {
-            mat->data[i][j] *= scale;
-        }
+  // temporary matrix allocation
+  xMatrix *temp = xMatrix_new(mat->cols, mat->rows);
+  if (temp == NULL)
+  {
+    return;
+  }
+
+  // value copy
+  for (uint32_t i = 0; i < mat->rows; i++)
+  {
+    for (uint32_t j = 0; j < mat->cols; j++)
+    {
+      xMatrix_set(temp, j, i, xMatrix_get(mat, i, j));
     }
+  }
+
+  // matrix swap
+  free(mat->data);
+  mat->data = temp->data;
+  mat->rows = temp->rows;
+  mat->cols = temp->cols;
+  free(temp);
+
+  return;
 }
 
-void xMatrix_rowAdd(xMatrix *mat, int row1, int row2, float scale) {
-    // check if matrix is not NULL
-    if (mat == NULL) {
-        return;
-    }
-    // validate index bounds
-    if (row1 >= mat->rows || row2 >= mat->rows) {
-        return;
-    }
+void xMatrix_scale(xMatrix *mat, float scale)
+{
+  // pointer checking
+  if (mat == NULL)
+  {
+    return;
+  }
 
-    for (int i = 0; i < mat->cols; i++) {
-        mat->data[row1][i] += mat->data[row2][i] * scale;
+  // value scaling
+  for (uint32_t i = 0; i < mat->rows; i++)
+  {
+    for (uint32_t j = 0; j < mat->cols; j++)
+    {
+      xMatrix_set(mat, i, j, xMatrix_get(mat, i, j) * scale);
     }
+  }
 }
 
-void xMatrix_colAdd(xMatrix *mat, int col1, int col2, float scale) {
-    // check if matrix is not NULL
-    if (mat == NULL) {
-        return;
-    }
-    // validate index bounds
-    if (col1 >= mat->cols || col2 >= mat->cols) {
-        return;
-    }
+void xMatrix_rowAdd(xMatrix *mat, uint32_t row1, uint32_t row2, float scale)
+{
+  // pointer checking
+  if (mat == NULL)
+  {
+    return;
+  }
 
-    for (int i = 0; i < mat->rows; i++) {
-        mat->data[i][col1] += mat->data[i][col2] * scale;
-    }
+  // index checking
+  if (row1 >= mat->rows || row2 >= mat->rows)
+  {
+    return;
+  }
+
+  // value addition
+  for (uint32_t i = 0; i < mat->cols; i++)
+  {
+    xMatrix_set(mat, row1, i, xMatrix_get(mat, row1, i) + xMatrix_get(mat, row2, i) * scale);
+  }
+
+  return;
 }
 
-void xMatrix_rowScale(xMatrix *mat, int rowIndex, float scale) {
-    // check if matrix is not NULL
-    if (mat == NULL) {
-        return;
-    }
-    // check index bounds
-    if (rowIndex >= mat->rows) {
-        return;
-    }
+void xMatrix_colAdd(xMatrix *mat, uint32_t col1, uint32_t col2, float scale)
+{
+  // pointer checking
+  if (mat == NULL)
+  {
+    return;
+  }
 
-    for (int i = 0; i < mat->cols; i++) {
-        mat->data[rowIndex][i] *= scale;
-    }
+  // index checking
+  if (col1 >= mat->cols || col2 >= mat->cols)
+  {
+    return;
+  }
+
+  // value addition
+  for (uint32_t i = 0; i < mat->rows; i++)
+  {
+    xMatrix_set(mat, i, col1, xMatrix_get(mat, i, col1) + xMatrix_get(mat, i, col2) * scale);
+  }
+
+  return;
 }
 
-void xMatrix_colScale(xMatrix *mat, int colIndex, float scale) {
-    // check if matrix is not NULL
-    if (mat == NULL) {
-        return;
-    }
-    // check index bounds
-    if (colIndex >= mat->cols) {
-        return;
-    }
+void xMatrix_rowScale(xMatrix *mat, uint32_t rowIndex, float scale)
+{
+  // pointer checking
+  if (mat == NULL)
+  {
+    return;
+  }
 
-    for (int i = 0; i < mat->rows; i++) {
-        mat->data[i][colIndex] *= scale;
-    }
+  // index checking
+  if (rowIndex >= mat->rows)
+  {
+    return;
+  }
+
+  // value scaling
+  for (uint32_t i = 0; i < mat->cols; i++)
+  {
+    xMatrix_set(mat, rowIndex, i, xMatrix_get(mat, rowIndex, i) * scale);
+  }
+
+  return;
 }
 
-float xMatrix_get(xMatrix *mat, int rowIndex, int colIndex) {
-    // check if matrix is NULL
-    if (mat == NULL) {
-        return 0.f;
-    }
-    // check index bounds
-    if (rowIndex >= mat->rows || colIndex >= mat->cols) {
-        return 0.f;
-    }
+void xMatrix_colScale(xMatrix *mat, uint32_t colIndex, float scale)
+{
+  // pointer checking
+  if (mat == NULL)
+  {
+    return;
+  }
 
-    return mat->data[rowIndex][colIndex];
+  // index checking
+  if (colIndex >= mat->cols)
+  {
+    return;
+  }
+
+  // value scaling
+  for (uint32_t i = 0; i < mat->rows; i++)
+  {
+    xMatrix_set(mat, i, colIndex, xMatrix_get(mat, i, colIndex) * scale);
+  }
+
+  return;
 }
 
-void xMatrix_set(xMatrix *mat, int rowIndex, int colIndex, float value) {
-    // check if matrix is NULL
-    if (mat == NULL) {
-        return;
-    }
-    // check index bounds
-    if (rowIndex >= mat->rows || colIndex >= mat->cols) {
-        return;
-    }
+float xMatrix_get(xMatrix *mat, uint32_t rowIndex, uint32_t colIndex)
+{
+  // pointer checking
+  if (mat == NULL)
+  {
+    return 0.0f;
+  }
 
-    mat->data[rowIndex][colIndex] = value;
+  // index checking
+  if (rowIndex >= mat->rows || colIndex >= mat->cols)
+  {
+    return 0.0f;
+  }
+
+  // value retrieval
+  return mat->data[rowIndex * mat->cols + colIndex];
 }
 
-xMatrix *xMatrix_flatten(xMatrix *mat, int axis) {
-    // check if matrix is NULL
-    if (mat == NULL) {
-        return NULL;
-    }
+void xMatrix_set(xMatrix *mat, uint32_t rowIndex, uint32_t colIndex, float value)
+{
+  // pointer checking
+  if (mat == NULL)
+  {
+    return;
+  }
 
-    xMatrix *retMatrix = NULL;
-    // flatten along rows (axis = 0)
-    if (axis == 0) {
-        retMatrix = xMatrix_new(1, mat->rows * mat->cols);
-        // check if matrix is successfully allocated
-        if (retMatrix == NULL) {
-            return NULL;
-        }
+  // index checking
+  if (rowIndex >= mat->rows || colIndex >= mat->cols)
+  {
+    return;
+  }
 
-        // assign values to new matrix
-        for (int i = 0; i < mat->rows; i++) {
-            for (int j = 0; j < mat->cols; j++) {
-                retMatrix->data[0][i * mat->cols + j] = mat->data[i][j];
-            }
-        }
-    }
-    // flatten matrix along columns (axis != 0)
-    else {
-        retMatrix = xMatrix_new(mat->rows * mat->cols, 1);
-        // check if matrix is successfully allocated
-        if (retMatrix == NULL) {
-            return NULL;
-        }
+  // value setting
+  mat->data[rowIndex * mat->cols + colIndex] = value;
 
-        // assign values to new matrix
-        for (int i = 0; i < mat->rows; i++) {
-            for (int j = 0; j < mat->cols; j++) {
-                retMatrix->data[i * mat->cols + j][0] = mat->data[i][j];
-            }
-        }
-    }
-
-    return retMatrix;
-}
-
-xMatrix *xMatrix_unwrap(xMatrix *mat, int rows, int cols, int axis) {
-    // check if matrix is NULL
-    if (mat == NULL) {
-        return NULL;
-    }
-
-    xMatrix *retMatrix = NULL;
-    // unwrap along rows (axis = 0)
-    if (axis == 0) {
-        // check if matrix can be unwrapped to given dimensions
-        if (mat->cols != rows * cols) {
-            return NULL;
-        }
-
-        retMatrix = xMatrix_new(rows, cols);
-        // check if matrix is successfully allocated
-        if (retMatrix == NULL) {
-            return NULL;
-        }
-
-        // assign values to new matrix
-        for (int i = 0; i < rows; i++) {
-            for (int j = 0; j < cols; j++) {
-                retMatrix->data[i][j] = mat->data[0][i * cols + j];
-            }
-        }
-    }
-    // unwrap along columns (axis != 0)
-    else {
-        // check if matrix can be unwrapped to given dimensions
-        if (mat->rows != rows * cols) {
-            return NULL;
-        }
-
-        retMatrix = xMatrix_new(rows, cols);
-        // check if matrix is successfully allocated
-        if (retMatrix == NULL) {
-            return NULL;
-        }
-
-        // assign values to new matrix
-        for (int i = 0; i < rows; i++) {
-            for (int j = 0; j < cols; j++) {
-                retMatrix->data[i][j] = mat->data[i * cols + j][0];
-            }
-        }
-    }
-
-    return retMatrix;
+  return;
 }
