@@ -105,18 +105,17 @@ typedef struct asteroid_s {
 #define PLAYER_BASE_SIZE 20.0f           // player base size in pixels
 #define PLAYER_MAX_BULLETS 10            // maximum number of bullets on screen
 #define PLAYER_BASE_ACCELERATION 500.0f  // acceleration in pixels per second^2
+#define PLAYER_MAX_SPEED 500.f           // player maximum speed in pixels per second
 #define PLAYER_BASE_ROTATION 5.f         // rotation speed in radians
 
 #define ASTEROID_SPEED 100                // asteroid base speed in pixels per second
 #define ASTEROID_BASE_GENERATION_COUNT 4  // number of asteroids generated at game start
 
 #define BULLET_LIFETIME 60   // bullet lifespan in frames
-#define BULLET_SPEED 500.0f  // bullet speed in pixels per second
+#define BULLET_SPEED 750.0f  // bullet speed in pixels per second
 #define FIRE_COOLDOWN 0.15f  // time between shots in seconds
 
 // ------------------------------------------------------------------
-// game function declarations
-Player* playerInit(void);
-void playerFree(Player* player);
+
 
 #endif  // MAIN_H

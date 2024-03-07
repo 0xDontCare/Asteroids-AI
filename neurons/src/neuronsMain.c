@@ -275,7 +275,7 @@ inline void UpdateSharedInput(void) {
 // update output from shared memory, game output (NN input)
 inline void UpdateSharedOutput(void) {
     // check input matrix dimension
-    if (input->rows != 1 || input->cols != 8) {
+    if (input->rows != 1 || input->cols != 5) {
         printf("ERROR: Invalid input matrix dimension.\n");
         exit(1);
     }
@@ -287,9 +287,9 @@ inline void UpdateSharedOutput(void) {
     xMatrix_set(input, 0, 2, shOutput->gameOutput03);
     xMatrix_set(input, 0, 3, shOutput->gameOutput04);
     xMatrix_set(input, 0, 4, shOutput->gameOutput05);
-    xMatrix_set(input, 0, 5, shOutput->gameOutput06);
-    xMatrix_set(input, 0, 6, shOutput->gameOutput07);
-    xMatrix_set(input, 0, 7, shOutput->gameOutput08);
+    //xMatrix_set(input, 0, 5, shOutput->gameOutput06);
+    //xMatrix_set(input, 0, 6, shOutput->gameOutput07);
+    //xMatrix_set(input, 0, 7, shOutput->gameOutput08);
     sm_unlockSharedOutput(shOutput);
 
     return;
@@ -354,11 +354,11 @@ inline float reLU(float x) {
 // initialize neural network program
 inline void InitNeurons(void) {
     // initialize matrices for network
-    weights1 = xMatrix_new(8, 32);  // input(8) -> hidden layer(32)
+    weights1 = xMatrix_new(5, 32);  // input(5) -> hidden layer(32)
     weights2 = xMatrix_new(32, 4);  // hidden layer(32) -> output(4)
     bias1 = xMatrix_new(1, 32);     // bias for hidden layer
     bias2 = xMatrix_new(1, 4);      // bias for output layer
-    input = xMatrix_new(1, 8);      // input matrix (1x8)
+    input = xMatrix_new(1, 5);      // input matrix (1x5)
     intermediate = xMatrix_new(1, 32);
     output = xMatrix_new(1, 4);  // output matrix (1x4)
 

@@ -45,14 +45,17 @@ static unsigned short levelsCleared = 0;
 // NOTE: Defined triangle is isosceles with common angles of 70 degrees.
 static float shipHeight = 0.0f;
 
-static Player player = {0};
-static Bullet bullet[PLAYER_MAX_BULLETS] = {0};
-static xArray *asteroids = NULL;
-static Vector2 closestAsteroid = {0};
-static float distanceFront = 0.0f;
+static Player player = {0};                      // player object
+static Bullet bullet[PLAYER_MAX_BULLETS] = {0};  // array of bullets
+static xArray *asteroids = NULL;                 // dynamic array of asteroids
+
+// calculated values for neural network input
+static Vector2 closestAsteroid = {0};   // polar coordinates of closest asteroid relative to player
+static Vector2 relativeVelocity = {0};  // relative velocity of player and closest asteroid
 
 static double fireCooldown = 0.0;
 static int destroyedMeteorsCount = 0;
+static int wastedBulletsCount = 0;
 
 //------------------------------------------------------------------------------------
 // local function declarations
@@ -64,6 +67,7 @@ static inline void UpdateSharedInput(void);   // get input from shared memory
 static inline void UpdateSharedOutput(void);  // update output in shared memory
 static inline float AsteroidRadius(int x);    // get asteroiFd radius from size class
 static inline void PregenAsteroids(void);     // pre-generate asteroids (and clear any existing ones)
+static Vector2 ClosestAsteroid(void);         // get distance and delta-rotation to closest asteroid
 static void InitGame(void);                   // initialize game
 static void UpdateGame(void);                 // update game (one time step)
 static void DrawGame(void);                   // draw game (one frame)
@@ -325,15 +329,16 @@ inline void UpdateSharedInput(void) {
 inline void UpdateSharedOutput(void) {
     if (flags_cmd & CMD_FLAG_USE_NEURAL || flags_cmd & CMD_FLAG_MANAGED) {
         // update shared output memory
+        // TODO: remove distanceFront and player absolute position from being passed to neural network (it is not useful)
         sm_lockSharedOutput(shOutput);
-        shOutput->gameOutput01 = player.position.x;  // passing player position to neural network
-        shOutput->gameOutput02 = player.position.y;  //
-        shOutput->gameOutput03 = player.rotation;    // passing player absolute rotation to neural network
-        shOutput->gameOutput04 = player.speed.x;     // passing player speed to neural network
-        shOutput->gameOutput05 = player.speed.y;     //
-        shOutput->gameOutput06 = distanceFront;      // passing distance to obstacle in front of player to neural network
-        shOutput->gameOutput07 = closestAsteroid.x;  // passing closest asteroid position to neural network
-        shOutput->gameOutput08 = closestAsteroid.y;  //
+        // shOutput->gameOutput01 = player.position.x;   // passing player position to neural network
+        // shOutput->gameOutput02 = player.position.y;   //
+        shOutput->gameOutput01 = player.rotation;     // passing player absolute rotation to neural network
+        shOutput->gameOutput02 = relativeVelocity.x;  // passing relative velocity between player and closest asteroid to neural network
+        shOutput->gameOutput03 = relativeVelocity.y;  //
+        // shOutput->gameOutput06 = distanceFront;       // passing distance to obstacle in front of player to neural network
+        shOutput->gameOutput04 = closestAsteroid.x;  // passing distance to closest asteroid to neural network
+        shOutput->gameOutput05 = closestAsteroid.y;  // passing delta-rotation to closest asteroid to neural network
         sm_unlockSharedOutput(shOutput);
     }
     return;
@@ -393,6 +398,36 @@ inline void PregenAsteroids(void) {
     }
 }
 
+// calculate distance and delta-rotation to closest asteroid
+Vector2 ClosestAsteroid(void) {
+    float minDistance = screenWidth + screenHeight;
+    float deltaRotation = 0;
+
+    for (int i = 0; i < asteroids->size; i++) {
+        Asteroid *asteroid = (Asteroid *)xArray_get(asteroids, i);
+        if (!asteroid->active) continue;
+        
+        float distance = Vector2Distance(asteroid->position, player.position);
+
+        if (distance < minDistance) {
+            minDistance = distance;
+
+            // calculate delta-rotation
+            deltaRotation = atan2f(asteroid->position.y - player.position.y, asteroid->position.x - player.position.x) - player.rotation;
+            if (deltaRotation > PI) {
+                deltaRotation -= 2 * PI;
+            } else if (deltaRotation < -PI) {
+                deltaRotation += 2 * PI;
+            }
+
+            // update relative velocity
+            relativeVelocity = Vector2Subtract(asteroid->speed, player.speed);
+        }
+    }
+
+    return (Vector2){minDistance, deltaRotation};
+}
+
 // initialize game variables
 void InitGame(void) {
     gamePaused = false;
@@ -438,6 +473,9 @@ void InitGame(void) {
 
 // update logic (one time step)
 void UpdateGame(void) {
+    // clear input
+    flags_input &= INPUT_NONE;
+
     // update input flags (depending on run mode)
     if ((flags_cmd & CMD_FLAG_MANAGED || flags_cmd & CMD_FLAG_USE_NEURAL) && !gameOver) {
         UpdateSharedInput();
@@ -459,6 +497,11 @@ void UpdateGame(void) {
             // Player logic: rotation
             if (flags_input & INPUT_A) player.rotation -= PLAYER_BASE_ROTATION * fixedTimeStep;
             if (flags_input & INPUT_D) player.rotation += PLAYER_BASE_ROTATION * fixedTimeStep;
+            if (player.rotation > PI) {
+                player.rotation -= 2 * M_PI;
+            } else if (player.rotation < -PI) {
+                player.rotation += 2 * PI;
+            }
 
             // Player logic: acceleration
             if (flags_input & INPUT_W) {
@@ -470,6 +513,9 @@ void UpdateGame(void) {
 
             // Player logic: speed
             player.speed = Vector2Add(player.speed, Vector2Scale(player.acceleration, fixedTimeStep));
+            if (Vector2Length(player.speed) > PLAYER_MAX_SPEED) {
+                player.speed = Vector2Scale(player.speed, PLAYER_MAX_SPEED / Vector2Length(player.speed));
+            }
 
             // Player logic: movement
             player.position = Vector2Add(player.position, Vector2Scale(player.speed, fixedTimeStep));
@@ -493,7 +539,7 @@ void UpdateGame(void) {
                     if (!bullet[i].active) {
                         bullet[i].position = (Vector2){player.position.x + cosf(player.rotation) * (shipHeight), player.position.y + sinf(player.rotation) * (shipHeight)};
                         bullet[i].active = true;
-                        bullet[i].speed = Vector2Scale((Vector2){cosf(player.rotation), sinf(player.rotation)}, BULLET_SPEED + Vector2Length(player.speed));
+                        bullet[i].speed = Vector2Scale((Vector2){cosf(player.rotation), sinf(player.rotation)}, BULLET_SPEED);
                         bullet[i].rotation = player.rotation;
                         fireCooldown = FIRE_COOLDOWN;
                         break;
@@ -530,6 +576,7 @@ void UpdateGame(void) {
                         bullet[i].speed = (Vector2){0, 0};
                         bullet[i].lifeSpawn = 0;
                         bullet[i].active = false;
+                        wastedBulletsCount++;
                     }
                 }
             }
@@ -605,18 +652,8 @@ void UpdateGame(void) {
                 }
             }
 
-            // calculating closest asteroid
-            float minDistance = screenWidth * screenHeight;
-            for (int i = 0; i < asteroids->size; i++) {
-                Asteroid *asteroid = (Asteroid *)xArray_get(asteroids, i);
-                if (!asteroid->active) continue;
-
-                float tmpDistance = Vector2Distance(player.position, asteroid->position);
-                if (tmpDistance < minDistance) {
-                    minDistance = tmpDistance;
-                    closestAsteroid = asteroid->position;
-                }
-            }
+            // calculate distance and delta-rotation to closest asteroid
+            closestAsteroid = ClosestAsteroid();
         }
 
         // all asteroids destroyed -> next level
@@ -638,8 +675,6 @@ void UpdateGame(void) {
     // update output and state IPC (depending on run mode)
     UpdateSharedOutput();
     UpdateSharedState();
-
-    flags_input &= INPUT_NONE;
 }
 
 // draw game (one frame)
@@ -671,16 +706,35 @@ void DrawGame(void) {
             if (bullet[i].active) DrawCircleV(bullet[i].position, bullet[i].radius, bullet[i].color);
         }
 
-        // DEBUG: Drawing colliders, closest asteroid and distance from player to closest asteroid
-        // DrawCircleLines(player.collider.x, player.collider.y, player.collider.z, GREEN);
-        // DrawCircleV(player.position, 5, BLUE);
-        // DrawCircleV(closestAsteroid, 5, RED);
-        // DrawText(TextFormat("Distance: %f", distanceFront), 20, 80, 20, WHITE);
+        // DEBUG: Drawing colliders, line to closest asteroid, etc.
+        if (flags_cmd & CMD_FLAG_USE_NEURAL) {
+            DrawCircleLines(player.collider.x, player.collider.y, player.collider.z, GREEN);
+            DrawCircleV(player.position, 5, BLUE);
+            DrawCircle(player.position.x + closestAsteroid.x * cosf(closestAsteroid.y + player.rotation), player.position.y + closestAsteroid.x * sinf(closestAsteroid.y + player.rotation), 5, RED);
+            DrawLineEx(player.position, Vector2Add(player.position, (Vector2){closestAsteroid.x * cosf(closestAsteroid.y + player.rotation), closestAsteroid.x * sinf(closestAsteroid.y + player.rotation)}), 2, RED);
+            DrawLineEx(player.position, Vector2Add(player.position, (Vector2){cosf(player.rotation) * 200, sinf(player.rotation) * 200}), 2, GREEN);
+        }
 
         // Draw status (score, levels cleared, time survived)
         DrawText(TextFormat("SCORE: %04i", score), 20, 20, 20, WHITE);
         DrawText(TextFormat("LEVEL: %02i", levelsCleared + 1), 20, 40, 20, WHITE);
         DrawText(TextFormat("TIME: %02i:%02i", (int)(currentTime.tv_sec - startTime.tv_sec) / 60, (int)(currentTime.tv_sec - startTime.tv_sec) % 60), 20, 60, 20, WHITE);
+
+        if (flags_cmd & CMD_FLAG_USE_NEURAL) {
+            // DEBUG: text status on right side of screen (input and output states for neural network)
+            DrawText(TextFormat("INPUT_01: %01i", ((flags_input & INPUT_W) > 0)), screenWidth - 250, 20, 20, WHITE);
+            DrawText(TextFormat("INPUT_02: %01i", ((flags_input & INPUT_A) > 0)), screenWidth - 250, 40, 20, WHITE);
+            DrawText(TextFormat("INPUT_03: %01i", ((flags_input & INPUT_D) > 0)), screenWidth - 250, 60, 20, WHITE);
+            DrawText(TextFormat("INPUT_04: %01i", ((flags_input & INPUT_SPACE) > 0)), screenWidth - 250, 80, 20, WHITE);
+            DrawText(TextFormat("OUTPUT_01: %.4f", player.rotation), screenWidth - 250, 120, 20, WHITE);
+            DrawText(TextFormat("OUTPUT_02: %.4f", relativeVelocity.x), screenWidth - 250, 140, 20, WHITE);
+            DrawText(TextFormat("OUTPUT_03: %.4f", relativeVelocity.y), screenWidth - 250, 160, 20, WHITE);
+            DrawText(TextFormat("OUTPUT_04: %.4f", closestAsteroid.x), screenWidth - 250, 180, 20, WHITE);
+            DrawText(TextFormat("OUTPUT_05: %.4f", closestAsteroid.y), screenWidth - 250, 200, 20, WHITE);
+
+            // DEBUG: text status on right side of screen (additional game information for fitness function)
+            DrawText(TextFormat("WASTED BULLETS: %04i", wastedBulletsCount), screenWidth - 250, 240, 20, WHITE);
+        }
 
         if (gamePaused) DrawText("GAME PAUSED", screenWidth / 2 - MeasureText("GAME PAUSED", 40) / 2, screenHeight / 2 - 40, 40, WHITE);
     } else {
