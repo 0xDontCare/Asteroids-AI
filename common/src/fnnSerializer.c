@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-FnnModel *fnnNew()
+FnnModel *fnn_new()
 {
   // memory allocation
   FnnModel *model = (FnnModel *)malloc(sizeof(FnnModel));
@@ -28,7 +28,7 @@ FnnModel *fnnNew()
   return model;
 }
 
-void fnnFree(FnnModel *model)
+void fnn_free(FnnModel *model)
 {
   if (model != NULL)
   {
@@ -42,14 +42,14 @@ void fnnFree(FnnModel *model)
   return;
 }
 
-int32_t fnnAddLayer(FnnModel *model, uint32_t neuronCount, float *weightVals, float *biasVals,
+int32_t fnn_addLayer(FnnModel *model, uint32_t neuronCount, float *weightVals, float *biasVals,
                     FnnActivation_e activationFunction)
 {
   // parameter checking
   if (model == NULL || neuronCount == 0 || (weightVals == NULL && model->layerCount > 0) ||
       (biasVals == NULL && model->layerCount > 0))
   {
-    fprintf(stderr, "FNN Serializer: fnnAddLayer bad arguments");
+    fprintf(stderr, "FNN Serializer: fnn_addLayer bad arguments");
     return -1;
   }
 
@@ -124,7 +124,7 @@ int32_t fnnAddLayer(FnnModel *model, uint32_t neuronCount, float *weightVals, fl
   return 0;
 }
 
-int32_t fnnSerialize(const char *filename, FnnModel *model)
+int32_t fnn_serialize(const char *filename, FnnModel *model)
 {
   // file opening
   FILE *file = fopen(filename, "wb");
@@ -176,7 +176,7 @@ int32_t fnnSerialize(const char *filename, FnnModel *model)
   return 0;
 }
 
-FnnModel *fnnDeserialize(const char *filename)
+FnnModel *fnn_deserialize(const char *filename)
 {
   // file opening
   FILE *file = fopen(filename, "rb");

@@ -2,10 +2,10 @@
  * @file fnnSerializer.h
  * @author 0xDontCare (https://github.com/0xDontCare)
  * @brief Feedforward Neural Network Serializer module
- * @version 0.02
- * @date 06.03.2024.
+ * @version 0.1
+ * @date 09.03.2024.
  *
- * @copyright Copyright (c) 2024
+ * @copyright All rights reserved (c) 2024
  *
  */
 
@@ -52,31 +52,19 @@ extern "C"
     float *biasValues;
   } FnnModel;
 
-  /*
-   * Serialization process:
-   * 1. Create empty FNN model object
-   * 2. Set values for `magic`, `version` and `layerCount` fields
-   * 3. Based on the `layerCount`, allocate arrays for `neuronCounts` and `activationFunctions`
-   * fields
-   * 4. Set values for `neuronCounts` and `activationFunctions` fields
-   * 5. Based on `neuronCounts`, allocate arrays for `weightValues` and `biasValues` fields
-   * 6. Set values for `weightValues` and `biasValues` fields
-   * 7. Calculate and set value for `totalParameters` field
-   * 8. Write FNN model to file as binary data
-   */
-
   /**
    * @brief Create empty FNN model object
+   * @return `FnnModel *`: Pointer to the FNN model if successful, NULL on failure
    *
    */
-  FnnModel *fnnNew();
+  FnnModel *fnn_new();
 
   /**
    * @brief Free FNN model from memory
    *
    * @param model FNN model to free
    */
-  void fnnFree(FnnModel *model);
+  void fnn_free(FnnModel *model);
 
   /**
    * @brief Add layer to FNN model
@@ -86,9 +74,9 @@ extern "C"
    * @param weightCount Number of weights in the layer
    * @param weightVals Weights for the layer
    * @param activationFunction Activation function used for the layer
-   * @return 0 on success, -1 on failure
+   * @return `int32_t`: 0 on success, -1 on failure
    */
-  int32_t fnnAddLayer(FnnModel *model, uint32_t neuronCount, float *weightVals, float *biasVals,
+  int32_t fnn_addLayer(FnnModel *model, uint32_t neuronCount, float *weightVals, float *biasVals,
                       FnnActivation_e activationFunction);
 
   /**
@@ -96,17 +84,17 @@ extern "C"
    *
    * @param filename Filename to store the serialized model to
    * @param model FNN model to serialize
-   * @return 0 on success, -1 on failure
+   * @return `int32_t`: 0 on success, -1 on failure
    */
-  int32_t fnnSerialize(const char *filename, FnnModel *model);
+  int32_t fnn_serialize(const char *filename, FnnModel *model);
 
   /**
    * @brief Deserialize FNN model from buffer
    *
    * @param filename File containing the serialized model
-   * @return Pointer to the deserialized FNN model, NULL on failure
+   * @return `FnnModel *`: Pointer to the deserialized FNN model, NULL on failure
    */
-  FnnModel *fnnDeserialize(const char *filename);
+  FnnModel *fnn_deserialize(const char *filename);
 
 #ifdef __cplusplus
 }
