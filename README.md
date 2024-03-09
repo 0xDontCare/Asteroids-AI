@@ -75,12 +75,14 @@ Management program is currently responsible for creating shared memory between g
 - [ ] Management program
 - [ ] Network serialization and deserialization
 - [ ] Running multiple agents and games in parallel
+- [ ] Creation of initial generation
 - [ ] Evaluation of agents (score, time, level)
 
 ### Phase 3.0
 - [ ] Fitness function (score, time)
-- [ ] Implement genetic algorithm
-- [ ] Add training functionality to management program
+- [ ] Crossover mechanism
+- [ ] Mutation mechanism
+- [ ] Creating new networks from previous generation
 
 ### Optionals 1.1
 - [ ] Add game menu screen
