@@ -1,6 +1,23 @@
 # compiler and linker flags
-CC = gcc
-LDFLAGS = -Llib -lraylib -lm -lpthread -lrt -lX11 -lGL -lm -lpthread -ldl
+CC = clang
+CFLAGS = -Wall -Wextra -Wpedantic -Werror -Wshadow -Wstrict-overflow -fno-strict-aliasing -std=gnu11 -pthread -D_DEFAULT_SOURCE
+LDFLAGS = -lraylib -lm -lpthread -lrt -lX11 -lGL -lm -lpthread -ldl
+
+SANITIZER ?= 0
+DEBUG ?= 0
+ifeq ($(SANITIZER), 1)
+	CFLAGS += -fno-sanitize-recover=all -fsanitize=address,leak,undefined
+	LDFLAGS += -fsanitize=address,leak,undefined
+	DEBUG = 1
+endif
+ifeq ($(DEBUG), 1)
+	CFLAGS += -DDEBUG -O0 -g
+else
+	CFLAGS += -O3
+endif
+
+# export variables to for sub-makefiles
+export CC CFLAGS
 
 # program directories
 COMMON_DIR = common
