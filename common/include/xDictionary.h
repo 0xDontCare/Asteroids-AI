@@ -7,6 +7,9 @@
  *
  * @copyright All rights reserved (c) 2023
  *
+ * Module declares dictionary structure and functions for managing it. All functions have prefix `xDictionary_`.
+ * Dictionary is implemented as an array of key-value pairs sorted by key in ascending order. Key hash function should be
+ * implemented manually depending on the key type. Access time is O(log n) for all operations.
  */
 
 #ifndef X_DICTIONARY_H
@@ -22,7 +25,7 @@ extern "C" {
  */
 typedef struct xKeyValuePair_s {
     unsigned long long key;  // hash of the key
-    void *value;        // pointer to the value
+    void *value;             // pointer to the value
 } xKeyValuePair;
 
 /**
@@ -44,7 +47,7 @@ typedef struct xDictionary_s {
  * @note
  * If function fails to allocate memory, it will return NULL.
  */
-xDictionary *xDictionary_new();
+xDictionary *xDictionary_new(void);
 
 /**
  * @brief
@@ -53,7 +56,8 @@ xDictionary *xDictionary_new();
  * @param dictionary Target xDictionary object.
  *
  * @note
- * This function does not free the values stored in the dictionary. They should be handled before freeing the dictionary if not needed.
+ * This function does not free the values stored in the dictionary. They should be handled before freeing the dictionary if not
+ * needed.
  */
 void xDictionary_free(xDictionary *dict);
 
@@ -98,7 +102,8 @@ void *xDictionary_get(xDictionary *dict, unsigned long long key);
  * If the key does not exist, the function will return NULL and do nothing to the dictionary.
  *
  * @note
- * The value of the removed entry is not freed from memory but rather returned to the user. It is up to the user to free it or store it elsewhere.
+ * The value of the removed entry is not freed from memory but rather returned to the user. It is up to the user to free it or store
+ * it elsewhere.
  */
 void *xDictionary_remove(xDictionary *dict, unsigned long long key);
 

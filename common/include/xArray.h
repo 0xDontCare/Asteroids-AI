@@ -7,6 +7,7 @@
  *
  * @copyright All rights reserved (c) 2023
  *
+ * Module declares dynamic array structure and functions for managing it. All functions have prefix `xArray_`.
  */
 
 #ifndef XSTRUCTURES_ARRAY_H
@@ -23,8 +24,8 @@ extern "C" {
  * xArray object which contains data, size and capacity.
  *
  * @warning
- * "size" and "cap" attributes should not be directly modified as all other functions within xString depend on that information and change them as needed.
- * It is best to treat them as read-only unless treated properly.
+ * "size" and "cap" attributes should not be directly modified as all other functions within xString depend on that information and
+ * change them as needed. It is best to treat them as read-only unless treated properly.
  *
  */
 typedef struct xArray_s {
@@ -43,7 +44,7 @@ typedef struct xArray_s {
  * If function fails to allocate memory, it will return NULL.
  *
  */
-xArray *xArray_new();
+xArray *xArray_new(void);
 
 /**
  * @brief
@@ -204,7 +205,8 @@ void xArray_clear(xArray *arr);
  * @param cmp Pointer to comparator function.
  *
  * @note
- * Comparator function should return negative value if first item precedes second item, positive value if first item follows second item and zero if items are equal.
+ * Comparator function should return negative value if first item precedes second item, positive value if first item follows second
+ * item and zero if items are equal.
  *
  */
 void xArray_sort(xArray *arr, int (*comparator)(const void *, const void *));
@@ -225,7 +227,7 @@ void xArray_reverse(xArray *arr);
  * @param arr Target xArray object.
  * @param func Pointer to mapping function.
  * @return Pointer to newly allocated xArray object containing mapped items.
- * 
+ *
  * @note
  * Items in newly created array are allocated on heap and should be managed by user.
  * Making any changes to them will not be reflected in original array.
@@ -240,10 +242,10 @@ xArray *xArray_map(xArray *arr, void *(*func)(void *));
  * @param arr Target xArray object.
  * @param test Pointer to test function.
  * @return Pointer to newly allocated xArray object containing filtered items.
- * 
+ *
  * @note
  * Test function should return non-zero value if item passes test, zero otherwise.
- * 
+ *
  * @note
  * Items in newly created array are not copied but referenced from original array.
  * Making any changes to them will be reflected in original array.
@@ -312,7 +314,7 @@ void xArray_fill(xArray *arr, void *item, int start, int end);
  *
  * @param arr Target xArray object.
  * @return Pointer to newly allocated xArray object containing copied items.
- * 
+ *
  * @note
  * Items in newly created array are not copied but referenced from original array.
  * Making any changes to them will be reflected in original array.

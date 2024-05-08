@@ -2,7 +2,8 @@
 
 #include <stdlib.h>
 
-xDictionary *xDictionary_new() {
+xDictionary *xDictionary_new(void)
+{
     xDictionary *dict = NULL;
     if ((dict = malloc(sizeof(xDictionary)))) {
         dict->size = 0;
@@ -12,7 +13,8 @@ xDictionary *xDictionary_new() {
     return dict;
 }
 
-void xDictionary_free(xDictionary *dict) {
+void xDictionary_free(xDictionary *dict)
+{
     if (dict) {
         if (dict->entries) {
             free(dict->entries);
@@ -21,7 +23,8 @@ void xDictionary_free(xDictionary *dict) {
     }
 }
 
-void xDictionary_insert(xDictionary *dict, unsigned long long key, void *value) {
+void xDictionary_insert(xDictionary *dict, unsigned long long key, void *value)
+{
     if (dict == NULL) {
         return;
     }
@@ -61,7 +64,8 @@ void xDictionary_insert(xDictionary *dict, unsigned long long key, void *value) 
     return;
 }
 
-void *xDictionary_get(xDictionary *dict, unsigned long long key) {
+void *xDictionary_get(xDictionary *dict, unsigned long long key)
+{
     if (dict == NULL) {
         return NULL;
     }
@@ -86,7 +90,8 @@ void *xDictionary_get(xDictionary *dict, unsigned long long key) {
     return NULL;
 }
 
-void *xDictionary_remove(xDictionary *dict, unsigned long long key) {
+void *xDictionary_remove(xDictionary *dict, unsigned long long key)
+{
     if (dict == NULL) {
         return NULL;
     }
@@ -119,7 +124,8 @@ void *xDictionary_remove(xDictionary *dict, unsigned long long key) {
     return NULL;
 }
 
-int xDictionary_contains(xDictionary *dict, unsigned long long key) {
+int xDictionary_contains(xDictionary *dict, unsigned long long key)
+{
     if (dict == NULL) {
         return 0;
     }
