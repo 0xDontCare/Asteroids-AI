@@ -36,12 +36,7 @@ enum cmdFlag_e {
  * 0x02 - paused
  * 0x04 - exit
  */
-enum neuronsRuntime_e {
-    RUNTIME_NONE = 0x00,
-    RUNTIME_RUNNING = 0x01,
-    RUNTIME_PAUSED = 0x02,
-    RUNTIME_EXIT = 0x04
-};
+enum neuronsRuntime_e { RUNTIME_NONE = 0x00, RUNTIME_RUNNING = 0x01, RUNTIME_PAUSED = 0x02, RUNTIME_EXIT = 0x04 };
 
 // ------------------------------------------------------------------
 // neural network constant definitions
