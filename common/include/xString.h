@@ -1,15 +1,18 @@
 /**
  * @file xString.h
  * @author 0xDontCare (https://github.com/0xDontCare)
- * @brief Safe string library module for xcFramework (and effectively successor to xStringWorks module).
- * @version 0.17
- * @date 07.11.2023.
- * @copyright All rights reserved (c) 2023
+ * @brief Safe string library module for xcFramework (and effectively successor
+ * to xStringWorks module).
+ * @version 0.18
+ * @date 08.05.2024.
+ * @copyright All rights reserved (c) 2024
  *
  * Library implements safer string type and respective functions for C.
- * All functionality from xStringWorks module is remplemented here (with minor differences in edge case handling) with addition of memory safe container for string data instead of working with basic C strings.
- * Some algorithms have also been tweaked (or changed completly) so functions should also be more optimized.
- *
+ * All functionality from xStringWorks module is remplemented here (with minor
+ * differences in edge case handling) with addition of memory safe container for
+ * string data instead of working with basic C strings. Some algorithms have
+ * also been tweaked (or changed completly) so functions should also be more
+ * optimized.
  */
 
 #ifndef XSTRING_H
@@ -21,14 +24,17 @@ extern "C" {
 
 /**
  * @brief
- * xString object consisting of string data, its length and allocated memory (maximum length).
+ * xString object consisting of string data, its length and allocated memory
+ * (maximum length).
  *
  * @remark
- * Unlike regular C strings, xString data is not null terminated. Instead its length is given through "len" attribute.
+ * Unlike regular C strings, xString data is not null terminated. Instead its
+ * length is given through "len" attribute.
  *
  * @warning
- * "len" and "cap" attributes should not be directly modified as all other functions within xString depend on that information and change them as needed.
- * It is best to treat them as read-only unless worked with properly.
+ * "len" and "cap" attributes should not be directly modified as all other
+ * functions within xString depend on that information and change them as
+ * needed. It is best to treat them as read-only unless worked with properly.
  *
  */
 typedef struct xString_s {
@@ -42,15 +48,18 @@ typedef struct xString_s {
  * Allocates and initializes new xString object (in heap).
  *
  * @note
- * Initially string capacity is 0, which means the string data itself is not allocated but should be allocated separately.
+ * Initially string capacity is 0, which means the string data itself is not
+ * allocated but should be allocated separately.
  *
  * @return
- * Pointer to newly created xString object if successfull, null pointer if failed.
+ * Pointer to newly created xString object if successfull, null pointer if
+ * failed.
  *
- * @see \ref xString_append(), \ref xString_Insert(), \ref xString_optimize(), \ref xString_free()
+ * @see \ref xString_append(), \ref xString_Insert(), \ref xString_optimize(),
+ * \ref xString_free()
  *
  */
-xString *xString_new();
+xString *xString_new(void);
 
 /**
  * @brief
@@ -73,12 +82,27 @@ void xString_free(xString *str);
  * @param str xString object to be optimized.
  *
  * @note
- * If function fails (due to memory allocation fail), string will not be optimized and will be left in larger block of memory.
+ * If function fails (due to memory allocation fail), string will not be
+ * optimized and will be left in larger block of memory.
  *
  * @see \ref xString_free(), \ref xString_append()
  *
  */
 void xString_optimize(xString *str);
+
+/**
+ * @brief Preallocate string buffer to target size.
+ *
+ * @param str xString object to be preallocated.
+ * @param size Target size of preallocated buffer.
+ *
+ * @note
+ * If new buffer allocation fails, old buffer will be left untouched.
+ *
+ * @warning
+ * Previous string data will be lost along with old buffer. Make copy if needed.
+ */
+void xString_preallocate(xString *str, int size);
 
 /**
  * @brief
@@ -90,14 +114,17 @@ void xString_optimize(xString *str);
  * @param len Block size.
  *
  * @note
- * If string data is unallocated or not large enough, new memory block will be automatically allocated.
+ * If string data is unallocated or not large enough, new memory block will be
+ * automatically allocated.
  *
  * @note
- * Due to way memory is extended to new size (by doubling old capacity), allocated memory block may be larger than actual string data length.
- * In this case, it would be suggested to optimize string if needed.
+ * Due to way memory is extended to new size (by doubling old capacity),
+ * allocated memory block may be larger than actual string data length. In this
+ * case, it would be suggested to optimize string if needed.
  *
  * @note
- * If appended data pointer is NULL or length value is invalid (0 or negative), xString object will be left untouched.
+ * If appended data pointer is NULL or length value is invalid (0 or negative),
+ * xString object will be left untouched.
  *
  * @see \ref xString_insert(), \ref xString_optimize()
  *
@@ -144,7 +171,8 @@ void xString_appendString(xString *str, xString *str2);
  * @param cstr Appended C string.
  *
  * @note
- * Null-terminator at the end of C string is ignored and is not appended to xString data.
+ * Null-terminator at the end of C string is ignored and is not appended to
+ * xString data.
  *
  * @note
  * This function is specialized case of xString_append() function.
@@ -153,24 +181,30 @@ void xString_appendString(xString *str, xString *str2);
  * @see \ref xString_append(), \ref xString_optimize()
  *
  */
-void xString_appendCString(xString *str, char *cstr);
+void xString_appendCString(xString *str, const char *cstr);
 
 /**
  * @brief
  * Create deep copy of already existing xString object.
  *
  * @param str Original xString object.
- * @return Copy of given xString object if succeeded, various outputs if fails (read note).
+ * @return Copy of given xString object if succeeded, various outputs if fails
+ * (read note).
  *
  * @note
- * If function fails (because of inabillity to allocate needed memory), it will return NULL if object is unable to be allocated, xString with NULL data if string data could not be allocated or partial copy of string data if allocated memory could not be extended.
- * Partially copied strings can be easily detected if original and copy have mismatching lengths while other two cases can be detected by checking if not NULL.
+ * If function fails (because of inabillity to allocate needed memory), it will
+ * return NULL if object is unable to be allocated, xString with NULL data if
+ * string data could not be allocated or partial copy of string data if
+ * allocated memory could not be extended. Partially copied strings can be
+ * easily detected if original and copy have mismatching lengths while other two
+ * cases can be detected by checking if not NULL.
  *
  * @remark
- * If original xString object is not optimized before copy, the copy may also have unoptimized memory size for its content.
+ * If original xString object is not optimized before copy, the copy may also
+ * have unoptimized memory size for its content.
  *
  */
-xString *xString_copy(xString *str);
+xString *xString_copy(const xString *str);
 
 /**
  * @brief
@@ -179,16 +213,18 @@ xString *xString_copy(xString *str);
  * @param str Input xString object.
  * @param start Starting index.
  * @param end Ending index.
- * @return Pointer to xString object containing selected substring of input xString object.
+ * @return Pointer to xString object containing selected substring of input
+ * xString object.
  *
  * @note
- * Selected interval includes characters on starting index and excludes one on the ending index.
+ * Selected interval includes characters on starting index and excludes one on
+ * the ending index.
  *
  * @remark
  * Output xString object data may be unoptimized.
  *
  */
-xString *xString_substring(xString *str, int start, int end);
+xString *xString_substring(const xString *str, int start, int end);
 
 /**
  * @brief
@@ -197,13 +233,16 @@ xString *xString_substring(xString *str, int start, int end);
  * @param str Input xString object.
  * @param data Pointer to data block.
  * @param len Data block size.
- * @return Index of first occurence of data block in xString data, -1 if no matches found or invalid arguments given.
+ * @return Index of first occurence of data block in xString data, -1 if no
+ * matches found or invalid arguments given.
  *
  * @note
- * If function fails to allocate memory for the LPS array used internally, it will fail and return -1.
+ * If function fails to allocate memory for the LPS array used internally, it
+ * will fail and return -1.
  *
  * @remark
- * Search is done by utilizing Knuth-Morris-Pratt algorithm resulting in O(m + n) time complexity rather than less efficient brute force.
+ * Search is done by utilizing Knuth-Morris-Pratt algorithm resulting in O(m +
+ * n) time complexity rather than less efficient brute force.
  *
  */
 int xString_find(xString *str, unsigned char *data, int len);
@@ -214,10 +253,12 @@ int xString_find(xString *str, unsigned char *data, int len);
  *
  * @param str Input xString object.
  * @param c Searched character.
- * @return Index of first occurence of character in xString data, -1 if not found.
+ * @return Index of first occurence of character in xString data, -1 if not
+ * found.
  *
  * @remark
- * Unlike other pattern finding functions in this module, this function uses O(n) pass through whole string until matching character is found.
+ * Unlike other pattern finding functions in this module, this function uses
+ * O(n) pass through whole string until matching character is found.
  *
  */
 int xString_findChar(xString *str, unsigned char c);
@@ -228,7 +269,8 @@ int xString_findChar(xString *str, unsigned char c);
  *
  * @param str Input xString object.
  * @param str2 Searched xString object.
- * @return Index of first occurence of another xString object in xString object, -1 if not found or invalid arguments given.
+ * @return Index of first occurence of another xString object in xString object,
+ * -1 if not found or invalid arguments given.
  *
  * @note
  * This function is specialized case of xString_find() function.
@@ -243,7 +285,8 @@ int xString_findString(xString *str, xString *str2);
  *
  * @param str Input xString object.
  * @param cstr Input C string.
- * @return Index of first occurence of C string in xString object, -1 if not found or invalid arguments given.
+ * @return Index of first occurence of C string in xString object, -1 if not
+ * found or invalid arguments given.
  *
  * @note
  * This function is specialized case of xString_find() function.
@@ -259,13 +302,16 @@ int xString_findCString(xString *str, char *cstr);
  * @param str Input xString object.
  * @param data Pointer to data block.
  * @param len Data block size.
- * @return Index of last occurence of data block in xString object, -1 if not found or invalid arguments given.
+ * @return Index of last occurence of data block in xString object, -1 if not
+ * found or invalid arguments given.
  *
  * @note
- * If function fails to allocate memory for the LPS array used internally, it will fail and return -1.
+ * If function fails to allocate memory for the LPS array used internally, it
+ * will fail and return -1.
  *
  * @remark
- * Search is done by utilizing slightly modified Knuth-Morris-Pratt algorithm resulting in O(m + n) time complexity rather than less efficient brute force.
+ * Search is done by utilizing slightly modified Knuth-Morris-Pratt algorithm
+ * resulting in O(m + n) time complexity rather than less efficient brute force.
  *
  */
 int xString_findLast(xString *str, unsigned char *data, int len);
@@ -276,10 +322,12 @@ int xString_findLast(xString *str, unsigned char *data, int len);
  *
  * @param str Input xString object.
  * @param c Searched character.
- * @return Index of last occurence of character in xString object, -1 if not found.
+ * @return Index of last occurence of character in xString object, -1 if not
+ * found.
  *
  * @remark
- * Unlike other pattern finding functions in this module, this function uses O(n) pass through whole string until matching character is found.
+ * Unlike other pattern finding functions in this module, this function uses
+ * O(n) pass through whole string until matching character is found.
  *
  */
 int xString_findLastChar(xString *str, unsigned char c);
@@ -290,7 +338,8 @@ int xString_findLastChar(xString *str, unsigned char c);
  *
  * @param str Input xString object.
  * @param str2 Searched xString object.
- * @return Index of last occurence of another xString object in xString object, -1 if not found or invalid arguments given.
+ * @return Index of last occurence of another xString object in xString object,
+ * -1 if not found or invalid arguments given.
  *
  * @note
  * This function is specialized case of xString_findLast() function.
@@ -305,7 +354,8 @@ int xString_findLastString(xString *str, xString *str2);
  *
  * @param str Input xString object.
  * @param cstr Searched C string.
- * @return Index of last occurence of C string in xString object, -1 if not found or invalid arguments given.
+ * @return Index of last occurence of C string in xString object, -1 if not
+ * found or invalid arguments given.
  *
  * @note
  * This function is specialized case of xString_findLast() function.
@@ -321,23 +371,28 @@ int xString_findLastCString(xString *str, char *cstr);
  * @param str Input xString object.
  * @param data Pointer to data block.
  * @param len Data block size.
- * @return Array of indices containing all occurences of data block in xString object terminated with -1.
+ * @return Array of indices containing all occurences of data block in xString
+ * object terminated with -1.
  *
  * @warning
- * If no match is found or invalid arguments are given, function will still return array with single element (-1).
- * Freeing the array is handled by user.
+ * If no match is found or invalid arguments are given, function will still
+ * return array with single element (-1). Freeing the array is handled by user.
  *
  * @note
- * If memory allocation fails (whether for the internal LPS array or returning indices array), function will return NULL instead.
+ * If memory allocation fails (whether for the internal LPS array or returning
+ * indices array), function will return NULL instead.
  *
  * @remark
- * Function utilizes modified Knuth-Morris-Pratt algorithm for more time efficient pattern searching than brute force search.
+ * Function utilizes modified Knuth-Morris-Pratt algorithm for more time
+ * efficient pattern searching than brute force search.
  *
  * @remark
- * This function only searches for non-overlapping matches. If overlapping matches are preferred, check out \ref xString_findAll_overlapping() function instead.
+ * This function only searches for non-overlapping matches. If overlapping
+ * matches are preferred, check out \ref xString_findAll_overlapping() function
+ * instead.
  *
  */
-int *xString_findAll(xString *str, unsigned char *data, int len);
+int *xString_findAll(const xString *str, unsigned char *data, int len);
 
 /**
  * @brief
@@ -345,17 +400,20 @@ int *xString_findAll(xString *str, unsigned char *data, int len);
  *
  * @param str Input xString object.
  * @param c Input character.
- * @return Array of indices of all occurences of character in xString object terminated with -1.
+ * @return Array of indices of all occurences of character in xString object
+ * terminated with -1.
  *
  * @warning
- * If no matches are found, function will still allocate array with space for terminating -1.
- * Freeing the array is left to user for handling.
+ * If no matches are found, function will still allocate array with space for
+ * terminating -1. Freeing the array is left to user for handling.
  *
  * @note
  * If memory allocation for indices array fails, function will return NULL.
  *
  * @remark
- * Function searches for matching character by passing through whole string twice (first time is counting for allocation after which all matches are added to array).
+ * Function searches for matching character by passing through whole string
+ * twice (first time is counting for allocation after which all matches are
+ * added to array).
  *
  */
 int *xString_findAllChar(xString *str, unsigned char c);
@@ -366,7 +424,8 @@ int *xString_findAllChar(xString *str, unsigned char c);
  *
  * @param str Input xString object.
  * @param str2 Searched xString object.
- * @return Array of indices of all occurences of another xString object in xString object terminated with -1.
+ * @return Array of indices of all occurences of another xString object in
+ * xString object terminated with -1.
  *
  * @note
  * This function is specialized case of \ref xString_findAll() function.
@@ -383,7 +442,8 @@ int *xString_findAllString(xString *str, xString *str2);
  *
  * @param str Input xString object.
  * @param cstr Searched C string.
- * @return Array of indices of all occurences of C string in xString object terminated with -1.
+ * @return Array of indices of all occurences of C string in xString object
+ * terminated with -1.
  *
  * @note
  * This function is specialized case of \ref xString_findAll() function.
@@ -401,35 +461,43 @@ int *xString_findAllCString(xString *str, char *cstr);
  * @param str Input xString object.
  * @param data Pointer to data block.
  * @param len Data block size.
- * @return Array of indices of all occurences of data block in xString object terminated with -1.
+ * @return Array of indices of all occurences of data block in xString object
+ * terminated with -1.
  *
  * @warning
- * If no match is found or invalid arguments are given, function will still create and return array with single element (-1).
- * Freeing the array is handled by user.
+ * If no match is found or invalid arguments are given, function will still
+ * create and return array with single element (-1). Freeing the array is
+ * handled by user.
  *
  * @note
- * If memory allocation fails (whether for the internal LPS array or returning indices array), function will return NULL instead.
+ * If memory allocation fails (whether for the internal LPS array or returning
+ * indices array), function will return NULL instead.
  *
  * @remark
- * Function utilizes modified Knuth-Morris-Pratt algorithm for more time efficient pattern searching than brute force search.
+ * Function utilizes modified Knuth-Morris-Pratt algorithm for more time
+ * efficient pattern searching than brute force search.
  *
  * @remark
- * This function only searches for ALL matches, even overlapping ones. If overlapping matches are unwanted, check out \ref xString_findAll() function instead.
+ * This function only searches for ALL matches, even overlapping ones. If
+ * overlapping matches are unwanted, check out \ref xString_findAll() function
+ * instead.
  *
  */
 int *xString_findAll_overlapping(xString *str, unsigned char *data, int len);
 
 /**
  * @brief
- * Find all occurences of another xString object in xString object (overlapping).
+ * Find all occurences of another xString object in xString object
+ * (overlapping).
  *
  * @param str Input xString object.
  * @param str2 Searched xString object.
- * @return Array of indices of all occurences of another xString object in xString object terminated with -1.
+ * @return Array of indices of all occurences of another xString object in
+ * xString object terminated with -1.
  *
  * @note
- * This function is specialized case of \ref xString_findAll_overlapping() function.
- * All of its notes and warnings are applicable here too.
+ * This function is specialized case of \ref xString_findAll_overlapping()
+ * function. All of its notes and warnings are applicable here too.
  *
  * @see \ref xString_findAll_overlapping()
  *
@@ -442,11 +510,12 @@ int *xString_findAllString_overlapping(xString *str, xString *str2);
  *
  * @param str Input xString object.
  * @param cstr Searched C string.
- * @return Array of indices of all occurences of C string in xString object terminated with -1.
+ * @return Array of indices of all occurences of C string in xString object
+ * terminated with -1.
  *
  * @note
- * This function is specialized case of \ref xString_findAll_overlapping() function.
- * All of its notes and warnings are applicable here too.
+ * This function is specialized case of \ref xString_findAll_overlapping()
+ * function. All of its notes and warnings are applicable here too.
  *
  * @see \ref xString_findAll_overlapping()
  *
@@ -463,16 +532,21 @@ int *xString_findAllCString_overlapping(xString *str, char *cstr);
  * @return Number of occurences of data block in xString object.
  *
  * @note
- * If invalid arguments are given, such as passing NULL as data pointer or negative length, function will return 0 as if no matches are found.
+ * If invalid arguments are given, such as passing NULL as data pointer or
+ * negative length, function will return 0 as if no matches are found.
  *
  * @note
- * If function fails to create LPS array for internal use, it will return 0 matches.
+ * If function fails to create LPS array for internal use, it will return 0
+ * matches.
  *
  * @remark
- * Function makes use of Knuth-Morris-Pratt algorithm for more time efficient searching rather than brute force searching.
+ * Function makes use of Knuth-Morris-Pratt algorithm for more time efficient
+ * searching rather than brute force searching.
  *
  * @remark
- * This function counts only non-overlapping matches of pattern in string. If overlapping matches are preferred, check out \ref xString_count_overlapping() function instead.
+ * This function counts only non-overlapping matches of pattern in string. If
+ * overlapping matches are preferred, check out \ref xString_count_overlapping()
+ * function instead.
  *
  */
 int xString_count(xString *str, unsigned char *data, int len);
@@ -486,7 +560,8 @@ int xString_count(xString *str, unsigned char *data, int len);
  * @return Number of occurences of character in xString object.
  *
  * @remark
- * Function counts character occurences by utilizing basic O(n) pass through whole string.
+ * Function counts character occurences by utilizing basic O(n) pass through
+ * whole string.
  */
 int xString_countChar(xString *str, unsigned char c);
 
@@ -526,7 +601,8 @@ int xString_countCString(xString *str, char *cstr);
 
 /**
  * @brief
- * Count occurrences of data block in xString object (overlapping matches included).
+ * Count occurrences of data block in xString object (overlapping matches
+ * included).
  *
  * @param str Input xString object.
  * @param data Pointer to data block.
@@ -534,31 +610,38 @@ int xString_countCString(xString *str, char *cstr);
  * @return Number of occurrences of data block in xString object.
  *
  * @note
- * If invalid arguments are given, such as passing NULL as data pointer or negative length, function will return 0 as if no matches are found.
+ * If invalid arguments are given, such as passing NULL as data pointer or
+ * negative length, function will return 0 as if no matches are found.
  *
  * @note
- * If function fails to create LPS array for internal use, it will return 0 matches.
+ * If function fails to create LPS array for internal use, it will return 0
+ * matches.
  *
  * @remark
- * Function makes use of Knuth-Morris-Pratt algorithm for more time efficient searching rather than brute force searching.
+ * Function makes use of Knuth-Morris-Pratt algorithm for more time efficient
+ * searching rather than brute force searching.
  *
  * @remark
- * This function counts ALL matches of pattern in string (even overlapping ones). If overlapping matches are unwanted, check out \ref xString_count() function instead.
+ * This function counts ALL matches of pattern in string (even overlapping
+ * ones). If overlapping matches are unwanted, check out \ref xString_count()
+ * function instead.
  *
  */
 int xString_count_overlapping(xString *str, unsigned char *data, int len);
 
 /**
  * @brief
- * Count occurrences of another xString object in xString object (overlapping matches included).
+ * Count occurrences of another xString object in xString object (overlapping
+ * matches included).
  *
  * @param str Input xString object.
  * @param str2 Searched xString object.
- * @return int Number of occurrences of another xString object in xString object.
+ * @return int Number of occurrences of another xString object in xString
+ * object.
  *
  * @note
- * This function is specialized case of \ref xString_count_overlapping() function.
- * All of its notes and warnings are applicable here too.
+ * This function is specialized case of \ref xString_count_overlapping()
+ * function. All of its notes and warnings are applicable here too.
  *
  * @see \ref xString_count_overlapping()
  *
@@ -567,15 +650,16 @@ int xString_countString_overlapping(xString *str, xString *str2);
 
 /**
  * @brief
- * Count occurrences of C string in xString object (overlapping matches included).
+ * Count occurrences of C string in xString object (overlapping matches
+ * included).
  *
  * @param str Input xString object.
  * @param cstr Searched C string.
  * @return int Number of occurrences of C string in xString object.
  *
  * @note
- * This function is specialized case of \ref xString_count_overlapping() function.
- * All of its notes and warnings are applicable here too.
+ * This function is specialized case of \ref xString_count_overlapping()
+ * function. All of its notes and warnings are applicable here too.
  *
  * @see \ref xString_count_overlapping()
  *
@@ -859,14 +943,15 @@ void xString_removeAllNewlines(xString *str);
  * @param str Input xString object.
  * @return int 1 if xString object is empty, 0 otherwise.
  */
-int xString_isEmpty(xString *str);
+int xString_isEmpty(const xString *str);
 
 /**
  * @brief Lexicographically compare two xString objects.
  *
  * @param str First xString object.
  * @param str2 Second xString object.
- * @return int 0 if xString objects are equal, 1 if first xString object is greater, -1 if second xString object is greater.
+ * @return int 0 if xString objects are equal, 1 if first xString object is
+ * greater, -1 if second xString object is greater.
  */
 int xString_compare(xString *str, xString *str2);
 
@@ -875,7 +960,8 @@ int xString_compare(xString *str, xString *str2);
  *
  * @param str xString object.
  * @param cstr C string.
- * @return int 0 if xString object and C string are equal, 1 if xString object is greater, -1 if C string is greater.
+ * @return int 0 if xString object and C string are equal, 1 if xString object
+ * is greater, -1 if C string is greater.
  */
 int xString_compareCString(xString *str, char *cstr);
 
@@ -884,16 +970,19 @@ int xString_compareCString(xString *str, char *cstr);
  *
  * @param str First xString object.
  * @param str2 Second xString object.
- * @return int 0 if xString objects are equal, 1 if first xString object is greater, -1 if second xString object is greater.
+ * @return int 0 if xString objects are equal, 1 if first xString object is
+ * greater, -1 if second xString object is greater.
  */
 int xString_compareIgnoreCase(xString *str, xString *str2);
 
 /**
- * @brief Lexicographically compare xString object and C string (case insensitive).
+ * @brief Lexicographically compare xString object and C string (case
+ * insensitive).
  *
  * @param str xString object.
  * @param cstr C string.
- * @return int 0 if xString object and C string are equal, 1 if xString object is greater, -1 if C string is greater.
+ * @return int 0 if xString object and C string are equal, 1 if xString object
+ * is greater, -1 if C string is greater.
  */
 int xString_compareIgnoreCaseCString(xString *str, char *cstr);
 
@@ -1019,7 +1108,7 @@ void xString_insertCString(xString *str, char *cstr, int index);
  * @param len Data block size.
  * @return xString* Array of xString objects.
  */
-xString **xString_split(xString *str, unsigned char *data, int len);
+xString **xString_split(const xString *str, unsigned char *data, int len);
 
 /**
  * @brief Split xString object into array of xString objects by character.
@@ -1028,16 +1117,17 @@ xString **xString_split(xString *str, unsigned char *data, int len);
  * @param c Input character.
  * @return xString* Array of xString objects.
  */
-xString **xString_splitChar(xString *str, unsigned char c);
+xString **xString_splitChar(const xString *str, unsigned char c);
 
 /**
- * @brief Split xString object into array of xString objects by another xString object.
+ * @brief Split xString object into array of xString objects by another xString
+ * object.
  *
  * @param str Input xString object.
  * @param str2 Input xString object.
  * @return xString* Array of xString objects.
  */
-xString **xString_splitString(xString *str, xString *str2);
+xString **xString_splitString(const xString *str, xString *str2);
 
 /**
  * @brief Split xString object into array of xString objects by C string.
@@ -1046,7 +1136,7 @@ xString **xString_splitString(xString *str, xString *str2);
  * @param cstr Input C string.
  * @return xString* Array of xString objects.
  */
-xString **xString_splitCString(xString *str, char *cstr);
+xString **xString_splitCString(const xString *str, char *cstr);
 
 /**
  * @brief Convert xString object to integer.
@@ -1119,9 +1209,10 @@ xString *xString_fromLong(long num);
  * @return Pointer to xString object, NULL if failed.
  *
  * @note
- * Null-terminator at the end of C string is ignored and is not appended to xString data.
+ * Null-terminator at the end of C string is ignored and is not appended to
+ * xString data.
  */
-xString *xString_fromCString(char *cstr);
+xString *xString_fromCString(const char *cstr);
 
 /**
  * @brief Check if xString object and data block are equal.
@@ -1157,7 +1248,8 @@ int xString_isEqualCString(xString *str, char *cstr);
  * @param str Pointer to xString object.
  * @return Hash value.
  *
- * @note Function uses FNV-1a algorithm for calculating hash value of string data.
+ * @note Function uses FNV-1a algorithm for calculating hash value of string
+ * data.
  */
 unsigned long long xString_hash(xString *str);
 
