@@ -12,7 +12,55 @@
 
 #include <stddef.h>
 
-int cu_CStringIsAlphanumeric(char *string) {
+int cu_CStringCompare(const char *str1, const char *str2)
+{
+    if (str1 == NULL || str2 == NULL) {
+        return 0;
+    }
+
+    int i = 0;
+    while (str1[i] != '\0' && str2[i] != '\0') {
+        if (str1[i] != str2[i]) {
+            return str1[i] - str2[i];
+        }
+        i++;
+    }
+
+    return str1[i] - str2[i];
+}
+
+int cu_CStringEndsWith(const char *string, const char *suffix)
+{
+    if (string == NULL || suffix == NULL) {
+        return 0;
+    }
+
+    int stringLength = 0;
+    int suffixLength = 0;
+    while (string[stringLength] != '\0') {
+        stringLength++;
+    }
+    while (suffix[suffixLength] != '\0') {
+        suffixLength++;
+    }
+
+    if (suffixLength > stringLength) {
+        return 0;
+    }
+
+    int i = 0;
+    while (suffix[i] != '\0') {
+        if (string[stringLength - suffixLength + i] != suffix[i]) {
+            return 0;
+        }
+        i++;
+    }
+
+    return 1;
+}
+
+int cu_CStringIsAlphanumeric(const char *string)
+{
     if (string == NULL) {
         return 1;
     }
@@ -27,7 +75,8 @@ int cu_CStringIsAlphanumeric(char *string) {
     return 1;
 }
 
-int cu_CStringIsNumeric(char *string) {
+int cu_CStringIsNumeric(const char *string)
+{
     if (string == NULL) {
         return 0;
     }
@@ -42,7 +91,8 @@ int cu_CStringIsNumeric(char *string) {
     return 1;
 }
 
-void cu_CStringTrimNewline(char *string) {
+void cu_CStringTrimNewline(char *string)
+{
     if (string == NULL) {
         return;
     }
