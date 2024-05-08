@@ -28,12 +28,10 @@ static void mmenu_overlookRunningInstances(void);  // view running instances
 static void mmenu_exitProgram(void);               // exit program
 static bool mmmenu_overlookInterpreter(void);      // running instances command sub-menu
 
-// TODO: instance function declarations
+// instance manager function declarations
 static managerInstance_t *instance_new(void);
 static void instance_free(managerInstance_t *descriptor);
 static int instance_start(managerInstance_t *descriptor);
-// static int instance_end(managerInstance_t *descriptor);
-// static int instance_status(managerInstance_t *descriptor);
 
 static int removeDirectoryContent(char *folderPath);          // remove all files from directory
 static void *instance_starter(xArray *descriptorArray);       // worker thread for automatic instance starting

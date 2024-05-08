@@ -333,9 +333,6 @@ xArray *xArray_copy(xArray *arr);
  */
 void xArray_swap(xArray *arr, int index1, int index2);
 
-// TODO: xArray_find, xArray_findIndex, xArray_includes, xArray_every, xArray_some, xArray_indexOf, xArray_lastIndexOf
-// MAYBE CREATE BRIDGE MODULE WITH xString module ==> xString *xArray_toString(xArray *arr)
-
 #ifdef __cplusplus
 }
 #endif

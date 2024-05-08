@@ -464,8 +464,6 @@ inline void InitNeurons(void)
 // update neural network (one frame)
 inline void UpdateNeurons(void)
 {
-    // TODO: correct inference to use matrices from lists
-
     // update state from shared memory
     UpdateSharedState();
 
