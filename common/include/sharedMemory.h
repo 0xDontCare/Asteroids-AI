@@ -2,14 +2,13 @@
  * @file sharedMemory.h
  * @author 0xDontCare (https://github.com/0xDontCare)
  * @brief Shared memory structures and functions for interprocess communication between game, manager and neural network programs.
- * @version 0.2
- * @date 11.12.2023.
+ * @version 0.2a
+ * @date 08.05.2024.
  *
- * @copyright All rights reserved (c) 2023
+ * @copyright All rights reserved (c) 2024
  *
  * Module declares structures and functions used for sharing data between game, manager and neural network programs.
  * All functions have prefix `sm_`.
- *
  */
 
 #ifndef ASTEROIDS_SHARED_H
@@ -57,7 +56,7 @@ struct sharedState_s {
     bool game_runHeadless;  // status if game is running headless (modified by manager)
     int game_gameScore;     // current game score (modified by game)
     int game_gameLevel;     // current game level (modified by game)
-    long game_gameTime;   // current game time  (modified by game)
+    long game_gameTime;     // current game time  (modified by game)
 };
 
 /**
@@ -201,6 +200,13 @@ struct sharedState_s *sm_allocateSharedState(const char *sharedMemoryName);
  * @return Pointer to shared state structure.
  */
 struct sharedState_s *sm_connectSharedState(const char *sharedMemoryName);
+
+/**
+ * @brief Initialize shared memory structure to default values.
+ *
+ * @param sharedState Pointer to shared memory structure.
+ */
+void sm_initSharedState(struct sharedState_s *sharedState);
 
 /**
  * @brief Destroy shared memory structure.
