@@ -76,7 +76,8 @@ static void UnloadGame(void);                 // unload game (free dynamic struc
 //------------------------------------------------------------------------------------
 // program entry point (main)
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
     // Parsing command line arguments
     //--------------------------------------------------------------------------------------
     if (argc > 1) {
@@ -92,22 +93,29 @@ int main(int argc, char *argv[]) {
             } else if (xString_isEqualCString(tmpString, "-H") || xString_isEqualCString(tmpString, "--headless")) {
                 flags_cmd |= CMD_FLAG_HEADLESS;
             } else if (xString_isEqualCString(tmpString, "-n") || xString_isEqualCString(tmpString, "--neural")) {
-                if (i + 2 >= argc) break;
+                if (i + 2 >= argc)
+                    break;
 
                 flags_cmd |= CMD_FLAG_USE_NEURAL;
                 cmd_shInputName = argv[i + 1];
                 cmd_shOutputName = argv[i + 2];
                 i += 2;
             } else if (xString_isEqualCString(tmpString, "-m") || xString_isEqualCString(tmpString, "--managed")) {
-                if (i + 3 >= argc) break;
+                if (i + 3 >= argc)
+                    break;
 
                 flags_cmd |= (CMD_FLAG_MANAGED | CMD_FLAG_HEADLESS);  // managed mode starts headless initially
                 cmd_shInputName = argv[i + 1];
                 cmd_shOutputName = argv[i + 2];
                 cmd_shStateName = argv[i + 3];
                 i += 3;
+            } else if (xString_isEqualCString(tmpString, "-r") || xString_isEqualCString(tmpString, "--random")) {
+                if (i + 1 > argc || !cu_CStringIsNumeric(argv[i + 1]))
+                    break;
 
-                // printf("[DEBUG] Starting managed with input: %s, output: %s, state: %s\n", cmd_shInputName, cmd_shOutputName, cmd_shStateName);
+                SetRandomSeed((unsigned int)atoi(argv[i + 1]));
+
+                i += 1;
             } else {
                 printf("ERROR: Unknown command line argument: %s\n", argv[i]);
                 printf("Use %s --help for more information.\n", argv[0]);
@@ -126,13 +134,22 @@ int main(int argc, char *argv[]) {
         flags_cmd |= CMD_FLAG_STANDALONE;
     }
 
+    if ((flags_cmd & (CMD_FLAG_STANDALONE | CMD_FLAG_MANAGED)) == 0) {
+        // no run mode specified, defaulting to standalone mode
+        flags_cmd |= CMD_FLAG_STANDALONE;
+    }
+
     // check for flag conflicts
-    if ((flags_cmd & CMD_FLAG_STANDALONE && flags_cmd & CMD_FLAG_HEADLESS) ||  // standalone and headless mode cannot be used at the same time
-        (flags_cmd & CMD_FLAG_STANDALONE && flags_cmd & CMD_FLAG_MANAGED) ||   // standalone and managed mode cannot be used at the same time
-        (flags_cmd & CMD_FLAG_HELP && flags_cmd & ~CMD_FLAG_HELP) ||           // help flag is exclusive to all other flags
+    if ((flags_cmd & CMD_FLAG_STANDALONE &&
+         flags_cmd & CMD_FLAG_HEADLESS) ||  // standalone and headless mode cannot be used at the same time
+        (flags_cmd & CMD_FLAG_STANDALONE &&
+         flags_cmd & CMD_FLAG_MANAGED) ||                             // standalone and managed mode cannot be used at the same time
+        (flags_cmd & CMD_FLAG_HELP && flags_cmd & ~CMD_FLAG_HELP) ||  // help flag is exclusive to all other flags
         (flags_cmd & CMD_FLAG_VERSION && flags_cmd & ~CMD_FLAG_VERSION) ||     // version flag is exclusive to all other flags
         (flags_cmd & CMD_FLAG_HEADLESS && !(flags_cmd & CMD_FLAG_MANAGED)) ||  // headless mode requires managed mode
-        (flags_cmd & CMD_FLAG_USE_NEURAL && flags_cmd & CMD_FLAG_MANAGED)) {   // neural network mode and managed mode cannot be used at the same time (managed mode already implies neural network mode)
+        (flags_cmd & CMD_FLAG_USE_NEURAL &&
+         flags_cmd & CMD_FLAG_MANAGED)) {  // neural network mode and managed mode cannot be defined at the same time (managed mode
+                                           // already implies neural network mode later on)
         printf("ERROR: Invalid command line arguments.\n");
         printf("Use %s --help for more information.\n", argv[0]);
         return 1;
@@ -147,7 +164,9 @@ int main(int argc, char *argv[]) {
         printf("  -s, --standalone\t\t\t\tRun game in standalone mode (no external manager program).\n");
         printf("  -H, --headless\t\t\t\tRun game in headless mode (no window). Use together with --managed\n");
         printf("  -n, --neural <input> <output>\t\t\tRun game in neural network mode (input and output shared memory names).\n");
-        printf("  -m, --managed <input> <output> <state>\tRun game in managed mode (input, output and state shared memory names).\n");
+        printf(
+            "  -m, --managed <input> <output> <state>\tRun game in managed mode (input, output and state shared memory names).\n");
+        printf("  -r, --random <seed>\t\t\t\tSet random seed for game initialization.\n");
         return 0;
     } else if (flags_cmd & CMD_FLAG_VERSION) {
         printf("Program:\t\tAsteroids-game\n");
@@ -158,13 +177,18 @@ int main(int argc, char *argv[]) {
         return 0;
     }
 
-    // flag arguments (shared memory names) should be only alphanumeric strings
+    // flag arguments (shared memory names) should be only alphanumeric strings with underscores
     if (flags_cmd & (CMD_FLAG_MANAGED | CMD_FLAG_USE_NEURAL)) {
-        if (!cu_CStringIsAlphanumeric(cmd_shInputName + 1) ||
-            !cu_CStringIsAlphanumeric(cmd_shOutputName + 1) ||
-            (cmd_shStateName != NULL && !cu_CStringIsAlphanumeric(cmd_shStateName + 1))) {
-            // +1 to skip first character (which is a forward slash)
-            printf("ERROR: Shared memory names can only contain alphanumeric characters.\n");
+        bool validNames = true;
+        validNames &= sm_validateSharedMemoryName(cmd_shInputName);
+        validNames &= sm_validateSharedMemoryName(cmd_shOutputName);
+        if (flags_cmd & CMD_FLAG_MANAGED) {
+            validNames &= sm_validateSharedMemoryName(cmd_shStateName);
+            flags_cmd |= CMD_FLAG_USE_NEURAL;  // managed mode implies neural network mode
+        }
+
+        if (!validNames) {
+            printf("ERROR: Shared memory names can only contain alphanumeric characters and underscores.\n");
             return 1;
         }
     }
@@ -214,11 +238,22 @@ int main(int argc, char *argv[]) {
     //--------------------------------------------------------------------------------------
     while (!(flags_runtime & RUNTIME_EXIT))  // Detect window close button or ESC key
     {
+        // Toggle window/headless mode
+        if (flags_cmd & CMD_FLAG_HEADLESS && flags_runtime & RUNTIME_WINDOW_ACTIVE) {
+            CloseWindow();
+            flags_runtime &= ~RUNTIME_WINDOW_ACTIVE;
+        } else if (!(flags_cmd & CMD_FLAG_HEADLESS) && !(flags_runtime & RUNTIME_WINDOW_ACTIVE)) {
+            InitWindow(screenWidth, screenHeight, "Asteroids");
+            SetTargetFPS(0);
+            flags_runtime |= RUNTIME_WINDOW_ACTIVE;
+        }
+
         // Update timer
         struct timespec newTime = {0};
         clock_gettime(CLOCK_MONOTONIC, &newTime);
         double frameTime = (newTime.tv_sec - currentTime.tv_sec) + (newTime.tv_nsec - currentTime.tv_nsec) / 1000000000.0;
-        if (frameTime > 0.25) frameTime = 0.25;  // NOTE: maximum accumulated time to avoid spiral of death
+        if (frameTime > 0.25)
+            frameTime = 0.25;  // NOTE: maximum accumulated time to avoid spiral of death
         currentTime = newTime;
         accumulator += frameTime;
 
@@ -229,15 +264,19 @@ int main(int argc, char *argv[]) {
         }
 
         // Draw game
-        DrawGame();
+        if (flags_runtime & RUNTIME_WINDOW_ACTIVE) {
+            DrawGame();
+        }
     }
+
     // De-Initialization
     //--------------------------------------------------------------------------------------
     UnloadGame();  // Unload dynamically loaded data (textures, sounds, models...)
 
-    CloseWindow();  // Close window and OpenGL context
+    if (flags_runtime & RUNTIME_WINDOW_ACTIVE) {
+        CloseWindow();  // Close window and OpenGL context
+    }
     //--------------------------------------------------------------------------------------
-
     return 0;
 }
 
@@ -245,7 +284,8 @@ int main(int argc, char *argv[]) {
 // local function definitions
 
 // open shared memory (or create if standalone-neural mode)
-inline void OpenSharedMemory(void) {
+inline void OpenSharedMemory(void)
+{
     if (flags_cmd & CMD_FLAG_MANAGED) {
         // connect to already existing shared memory
         shInput = sm_connectSharedInput(cmd_shInputName);
@@ -256,7 +296,15 @@ inline void OpenSharedMemory(void) {
             printf("ERROR: Failed to connect to shared memory.\n");
             exit(1);
         }
-    } else if (flags_cmd & CMD_FLAG_STANDALONE && flags_cmd & CMD_FLAG_USE_NEURAL) {
+
+        // set shared state variables
+        sm_lockSharedState(shState);
+        shState->state_gameAlive = true;
+        shState->game_isOver = false;
+        shState->game_isPaused = false;
+        flags_cmd |= shState->game_runHeadless ? CMD_FLAG_HEADLESS : 0;
+        sm_unlockSharedState(shState);
+    } else if (flags_cmd & CMD_FLAG_STANDALONE) {
         // create new shared memory
         shInput = sm_allocateSharedInput(cmd_shInputName);
         shOutput = sm_allocateSharedOutput(cmd_shOutputName);
@@ -273,13 +321,19 @@ inline void OpenSharedMemory(void) {
     return;
 }
 
-inline void CloseSharedMemory(void) {
+inline void CloseSharedMemory(void)
+{
     if (flags_cmd & CMD_FLAG_MANAGED) {
         // disconnect from shared memory
+        sm_lockSharedState(shState);
+        shState->state_gameAlive = false;
+        shState->game_isOver = true;
+        sm_unlockSharedState(shState);
+
         sm_disconnectSharedInput(shInput);
         sm_disconnectSharedOutput(shOutput);
         sm_disconnectSharedState(shState);
-    } else if (flags_cmd & CMD_FLAG_STANDALONE && flags_cmd & CMD_FLAG_USE_NEURAL) {
+    } else if (flags_cmd & CMD_FLAG_STANDALONE) {
         // destroy shared memory
         sm_freeSharedInput(shInput, cmd_shInputName);
         sm_freeSharedOutput(shOutput, cmd_shOutputName);
@@ -292,7 +346,8 @@ inline void CloseSharedMemory(void) {
     return;
 }
 
-inline void UpdateSharedState(void) {
+inline void UpdateSharedState(void)
+{
     if (flags_cmd & CMD_FLAG_MANAGED) {
         // update shared state memory
         sm_lockSharedState(shState);
@@ -301,6 +356,7 @@ inline void UpdateSharedState(void) {
         shState->game_gameScore = score;
         shState->game_gameLevel = levelsCleared;
         shState->game_gameTime = (currentTime.tv_sec - startTime.tv_sec);
+        flags_cmd &= ~CMD_FLAG_HEADLESS | (shState->game_runHeadless ? CMD_FLAG_HEADLESS : 0);
 
         if (shState->control_gameExit || !shState->state_managerAlive) {
             // game should exit
@@ -312,8 +368,9 @@ inline void UpdateSharedState(void) {
     return;
 }
 
-inline void UpdateSharedInput(void) {
-    if (flags_cmd & CMD_FLAG_USE_NEURAL || flags_cmd & CMD_FLAG_MANAGED) {
+inline void UpdateSharedInput(void)
+{
+    if (flags_cmd & CMD_FLAG_USE_NEURAL) {
         // update shared input memory
         sm_lockSharedInput(shInput);
         flags_input = INPUT_NONE;
@@ -326,15 +383,16 @@ inline void UpdateSharedInput(void) {
     return;
 }
 
-inline void UpdateSharedOutput(void) {
-    if (flags_cmd & CMD_FLAG_USE_NEURAL || flags_cmd & CMD_FLAG_MANAGED) {
+inline void UpdateSharedOutput(void)
+{
+    if (flags_cmd & CMD_FLAG_USE_NEURAL) {
         // update shared output memory
-        // TODO: remove distanceFront and player absolute position from being passed to neural network (it is not useful)
         sm_lockSharedOutput(shOutput);
         // shOutput->gameOutput01 = player.position.x;   // passing player position to neural network
         // shOutput->gameOutput02 = player.position.y;   //
-        shOutput->gameOutput01 = player.rotation;     // passing player absolute rotation to neural network
-        shOutput->gameOutput02 = relativeVelocity.x;  // passing relative velocity between player and closest asteroid to neural network
+        shOutput->gameOutput01 = player.rotation;  // passing player absolute rotation to neural network
+        shOutput->gameOutput02 =
+            relativeVelocity.x;  // passing relative velocity between player and closest asteroid to neural network
         shOutput->gameOutput03 = relativeVelocity.y;  //
         // shOutput->gameOutput06 = distanceFront;       // passing distance to obstacle in front of player to neural network
         shOutput->gameOutput04 = closestAsteroid.x;  // passing distance to closest asteroid to neural network
@@ -344,13 +402,15 @@ inline void UpdateSharedOutput(void) {
     return;
 }
 
-inline float AsteroidRadius(int x) {
+inline float AsteroidRadius(int x)
+{
     // function is obtained by polynomial interpolation of points (1, 5), (2, 10), (3, 20)
     return (float)(5.0f / 2.0f * (x * x - x) + 5.0f);
 }
 
 // pre-generate asteroids (and clear any existing ones from previous level)
-inline void PregenAsteroids(void) {
+inline void PregenAsteroids(void)
+{
     // clear old asteroids (if any)
     xArray_clear(asteroids);
 
@@ -364,7 +424,7 @@ inline void PregenAsteroids(void) {
         }
 
         // setting asteroid properties
-        int posx, posy;
+        int posx = 0, posy = 0;
         bool validRange = false;
 
         newAsteroid->sizeClass = 3;  // all asteroids are large initially
@@ -399,21 +459,26 @@ inline void PregenAsteroids(void) {
 }
 
 // calculate distance and delta-rotation to closest asteroid
-Vector2 ClosestAsteroid(void) {
+Vector2 ClosestAsteroid(void)
+{
+    // TODO: fix calculation for screen wrap-around
+
     float minDistance = screenWidth + screenHeight;
     float deltaRotation = 0;
 
     for (int i = 0; i < asteroids->size; i++) {
         Asteroid *asteroid = (Asteroid *)xArray_get(asteroids, i);
-        if (!asteroid->active) continue;
-        
+        if (!asteroid->active)
+            continue;
+
         float distance = Vector2Distance(asteroid->position, player.position);
 
         if (distance < minDistance) {
             minDistance = distance;
 
             // calculate delta-rotation
-            deltaRotation = atan2f(asteroid->position.y - player.position.y, asteroid->position.x - player.position.x) - player.rotation;
+            deltaRotation =
+                atan2f(asteroid->position.y - player.position.y, asteroid->position.x - player.position.x) - player.rotation;
             if (deltaRotation > PI) {
                 deltaRotation -= 2 * PI;
             } else if (deltaRotation < -PI) {
@@ -429,7 +494,8 @@ Vector2 ClosestAsteroid(void) {
 }
 
 // initialize game variables
-void InitGame(void) {
+void InitGame(void)
+{
     gamePaused = false;
     score = 0;
     levelsCleared = 0;
@@ -441,7 +507,7 @@ void InitGame(void) {
     }
 
     // initialization of shared memory depending on run mode
-    if (flags_cmd & CMD_FLAG_MANAGED || flags_cmd & CMD_FLAG_USE_NEURAL) {
+    if (flags_cmd & CMD_FLAG_USE_NEURAL) {
         OpenSharedMemory();
     }
 
@@ -451,7 +517,8 @@ void InitGame(void) {
     player.speed = (Vector2){0, 0};
     player.acceleration = (Vector2){0, 0};
     player.rotation = -(PI / 2);
-    player.collider = (Vector3){player.position.x - sinf(player.rotation) * (shipHeight / 2.5f), player.position.y - sinf(player.rotation) * (shipHeight / 2.5f), 12};
+    player.collider = (Vector3){player.position.x - sinf(player.rotation) * (shipHeight / 2.5f),
+                                player.position.y - sinf(player.rotation) * (shipHeight / 2.5f), 12};
     player.color = WHITE;
     destroyedMeteorsCount = 0;
 
@@ -472,12 +539,13 @@ void InitGame(void) {
 }
 
 // update logic (one time step)
-void UpdateGame(void) {
+void UpdateGame(void)
+{
     // clear input
     flags_input &= INPUT_NONE;
 
     // update input flags (depending on run mode)
-    if ((flags_cmd & CMD_FLAG_MANAGED || flags_cmd & CMD_FLAG_USE_NEURAL) && !gameOver) {
+    if ((flags_cmd & CMD_FLAG_USE_NEURAL) && !gameOver) {
         UpdateSharedInput();
     } else if (flags_runtime & RUNTIME_WINDOW_ACTIVE) {
         flags_input |= IsKeyDown(KEY_W) ? INPUT_W : 0;
@@ -491,12 +559,15 @@ void UpdateGame(void) {
     }
 
     if (!gameOver) {
-        if (flags_input & INPUT_PAUSE) gamePaused = !gamePaused;
+        if (flags_input & INPUT_PAUSE)
+            gamePaused = !gamePaused;
 
         if (!gamePaused) {
             // Player logic: rotation
-            if (flags_input & INPUT_A) player.rotation -= PLAYER_BASE_ROTATION * fixedTimeStep;
-            if (flags_input & INPUT_D) player.rotation += PLAYER_BASE_ROTATION * fixedTimeStep;
+            if (flags_input & INPUT_A)
+                player.rotation -= PLAYER_BASE_ROTATION * fixedTimeStep;
+            if (flags_input & INPUT_D)
+                player.rotation += PLAYER_BASE_ROTATION * fixedTimeStep;
             if (player.rotation > PI) {
                 player.rotation -= 2 * M_PI;
             } else if (player.rotation < -PI) {
@@ -505,7 +576,8 @@ void UpdateGame(void) {
 
             // Player logic: acceleration
             if (flags_input & INPUT_W) {
-                player.acceleration = Vector2Scale((Vector2){cosf(player.rotation), sinf(player.rotation)}, PLAYER_BASE_ACCELERATION);
+                player.acceleration =
+                    Vector2Scale((Vector2){cosf(player.rotation), sinf(player.rotation)}, PLAYER_BASE_ACCELERATION);
             } else {
                 // decelerate to 0.99f of current speed
                 player.acceleration = Vector2Scale(player.speed, -0.01f / fixedTimeStep);
@@ -531,13 +603,15 @@ void UpdateGame(void) {
                 player.position.y = screenHeight + shipHeight;
 
             // Player bullet cooldown logic
-            if (fireCooldown > 0.0f) fireCooldown -= 1.0f * fixedTimeStep;
+            if (fireCooldown > 0.0f)
+                fireCooldown -= 1.0f * fixedTimeStep;
 
             // Player bullet logic
             if (flags_input & INPUT_SPACE && fireCooldown <= 0.0f) {
                 for (int i = 0; i < PLAYER_MAX_BULLETS; i++) {
                     if (!bullet[i].active) {
-                        bullet[i].position = (Vector2){player.position.x + cosf(player.rotation) * (shipHeight), player.position.y + sinf(player.rotation) * (shipHeight)};
+                        bullet[i].position = (Vector2){player.position.x + cosf(player.rotation) * (shipHeight),
+                                                       player.position.y + sinf(player.rotation) * (shipHeight)};
                         bullet[i].active = true;
                         bullet[i].speed = Vector2Scale((Vector2){cosf(player.rotation), sinf(player.rotation)}, BULLET_SPEED);
                         bullet[i].rotation = player.rotation;
@@ -549,7 +623,8 @@ void UpdateGame(void) {
 
             // Bullet life timer
             for (int i = 0; i < PLAYER_MAX_BULLETS; i++) {
-                if (bullet[i].active) bullet[i].lifeSpawn++;
+                if (bullet[i].active)
+                    bullet[i].lifeSpawn++;
             }
 
             // Shot logic
@@ -582,13 +657,16 @@ void UpdateGame(void) {
             }
 
             // asteroid logic
-            player.collider = (Vector3){player.position.x + cosf(player.rotation) * (shipHeight / 2.5f), player.position.y + sinf(player.rotation) * (shipHeight / 2.5f), 12};
+            player.collider = (Vector3){player.position.x + cosf(player.rotation) * (shipHeight / 2.5f),
+                                        player.position.y + sinf(player.rotation) * (shipHeight / 2.5f), 12};
             for (int i = 0; i < asteroids->size; i++) {
                 Asteroid *asteroid = (Asteroid *)xArray_get(asteroids, i);
-                if (!asteroid->active) continue;
+                if (!asteroid->active)
+                    continue;
 
                 // collision logic: player vs asteroids
-                if (CheckCollisionCircles((Vector2){player.collider.x, player.collider.y}, player.collider.z, asteroid->position, asteroid->radius)) {
+                if (CheckCollisionCircles((Vector2){player.collider.x, player.collider.y}, player.collider.z, asteroid->position,
+                                          asteroid->radius)) {
                     gameOver = true;
                     break;
                 }
@@ -611,18 +689,19 @@ void UpdateGame(void) {
 
             // Collision logic: bullets vs asteroids
             for (int i = 0; i < PLAYER_MAX_BULLETS; i++) {
-                if (!bullet[i].active) continue;
+                if (!bullet[i].active)
+                    continue;
 
                 for (int j = 0; j < asteroids->size; j++) {
                     Asteroid *asteroid = (Asteroid *)xArray_get(asteroids, j);
-                    if (!asteroid->active) continue;
+                    if (!asteroid->active)
+                        continue;
 
                     if (CheckCollisionCircles(bullet[i].position, bullet[i].radius, asteroid->position, asteroid->radius)) {
                         bullet[i].active = false;
                         bullet[i].lifeSpawn = 0;
                         asteroid->active = false;
-                        score += (asteroid->sizeClass == 3) ? 25 : (asteroid->sizeClass == 2) ? 50
-                                                                                              : 100;
+                        score += (asteroid->sizeClass == 3) ? 25 : (asteroid->sizeClass == 2) ? 50 : 100;
                         destroyedMeteorsCount++;
 
                         // spawn smaller asteroids
@@ -638,7 +717,11 @@ void UpdateGame(void) {
                                 // setting asteroid properties
                                 newAsteroid->sizeClass = asteroid->sizeClass - 1;
                                 newAsteroid->position = (Vector2){asteroid->position.x, asteroid->position.y};
-                                newAsteroid->speed = (Vector2){sinf(bullet[i].rotation) * ASTEROID_SPEED * (k == 0 ? -(4 - newAsteroid->sizeClass) : (4 - newAsteroid->sizeClass)), cosf(bullet[i].rotation) * ASTEROID_SPEED * (k == 0 ? (4 - newAsteroid->sizeClass) : -(4 - newAsteroid->sizeClass))};
+                                // set new asteroid speeds to be normal to line between collided bullet and asteroid
+                                newAsteroid->speed = Vector2Scale(
+                                    Vector2Rotate(Vector2Normalize(Vector2Subtract(asteroid->position, bullet[i].position)),
+                                                  90 * DEG2RAD),
+                                    ASTEROID_SPEED * (k == 0 ? -(4 - newAsteroid->sizeClass) : (4 - newAsteroid->sizeClass)));
                                 newAsteroid->radius = AsteroidRadius(newAsteroid->sizeClass + 2);
                                 newAsteroid->active = true;
                                 newAsteroid->color = WHITE;
@@ -678,16 +761,20 @@ void UpdateGame(void) {
 }
 
 // draw game (one frame)
-void DrawGame(void) {
+void DrawGame(void)
+{
     BeginDrawing();
 
     ClearBackground(BLACK);
 
     if (!gameOver) {
         // Draw spaceship
-        Vector2 v1 = {player.position.x + cosf(player.rotation) * (shipHeight), player.position.y + sinf(player.rotation) * (shipHeight)};
-        Vector2 v2 = {player.position.x + sinf(player.rotation) * (PLAYER_BASE_SIZE / 2), player.position.y - cosf(player.rotation) * (PLAYER_BASE_SIZE / 2)};
-        Vector2 v3 = {player.position.x - sinf(player.rotation) * (PLAYER_BASE_SIZE / 2), player.position.y + cosf(player.rotation) * (PLAYER_BASE_SIZE / 2)};
+        Vector2 v1 = {player.position.x + cosf(player.rotation) * (shipHeight),
+                      player.position.y + sinf(player.rotation) * (shipHeight)};
+        Vector2 v2 = {player.position.x + sinf(player.rotation) * (PLAYER_BASE_SIZE / 2),
+                      player.position.y - cosf(player.rotation) * (PLAYER_BASE_SIZE / 2)};
+        Vector2 v3 = {player.position.x - sinf(player.rotation) * (PLAYER_BASE_SIZE / 2),
+                      player.position.y + cosf(player.rotation) * (PLAYER_BASE_SIZE / 2)};
         DrawTriangleLines(v1, v2, v3, player.color);
 
         // Draw asteroids
@@ -703,22 +790,30 @@ void DrawGame(void) {
 
         // Draw bullet
         for (int i = 0; i < PLAYER_MAX_BULLETS; i++) {
-            if (bullet[i].active) DrawCircleV(bullet[i].position, bullet[i].radius, bullet[i].color);
+            if (bullet[i].active)
+                DrawCircleV(bullet[i].position, bullet[i].radius, bullet[i].color);
         }
 
         // DEBUG: Drawing colliders, line to closest asteroid, etc.
         if (flags_cmd & CMD_FLAG_USE_NEURAL) {
             DrawCircleLines(player.collider.x, player.collider.y, player.collider.z, GREEN);
             DrawCircleV(player.position, 5, BLUE);
-            DrawCircle(player.position.x + closestAsteroid.x * cosf(closestAsteroid.y + player.rotation), player.position.y + closestAsteroid.x * sinf(closestAsteroid.y + player.rotation), 5, RED);
-            DrawLineEx(player.position, Vector2Add(player.position, (Vector2){closestAsteroid.x * cosf(closestAsteroid.y + player.rotation), closestAsteroid.x * sinf(closestAsteroid.y + player.rotation)}), 2, RED);
-            DrawLineEx(player.position, Vector2Add(player.position, (Vector2){cosf(player.rotation) * 200, sinf(player.rotation) * 200}), 2, GREEN);
+            DrawCircle(player.position.x + closestAsteroid.x * cosf(closestAsteroid.y + player.rotation),
+                       player.position.y + closestAsteroid.x * sinf(closestAsteroid.y + player.rotation), 5, RED);
+            DrawLineEx(player.position,
+                       Vector2Add(player.position, (Vector2){closestAsteroid.x * cosf(closestAsteroid.y + player.rotation),
+                                                             closestAsteroid.x * sinf(closestAsteroid.y + player.rotation)}),
+                       2, RED);
+            DrawLineEx(player.position,
+                       Vector2Add(player.position, (Vector2){cosf(player.rotation) * 200, sinf(player.rotation) * 200}), 2, GREEN);
         }
 
         // Draw status (score, levels cleared, time survived)
         DrawText(TextFormat("SCORE: %04i", score), 20, 20, 20, WHITE);
         DrawText(TextFormat("LEVEL: %02i", levelsCleared + 1), 20, 40, 20, WHITE);
-        DrawText(TextFormat("TIME: %02i:%02i", (int)(currentTime.tv_sec - startTime.tv_sec) / 60, (int)(currentTime.tv_sec - startTime.tv_sec) % 60), 20, 60, 20, WHITE);
+        DrawText(TextFormat("TIME: %02i:%02i", (int)(currentTime.tv_sec - startTime.tv_sec) / 60,
+                            (int)(currentTime.tv_sec - startTime.tv_sec) % 60),
+                 20, 60, 20, WHITE);
 
         if (flags_cmd & CMD_FLAG_USE_NEURAL) {
             // DEBUG: text status on right side of screen (input and output states for neural network)
@@ -736,11 +831,13 @@ void DrawGame(void) {
             DrawText(TextFormat("WASTED BULLETS: %04i", wastedBulletsCount), screenWidth - 250, 240, 20, WHITE);
         }
 
-        if (gamePaused) DrawText("GAME PAUSED", screenWidth / 2 - MeasureText("GAME PAUSED", 40) / 2, screenHeight / 2 - 40, 40, WHITE);
+        if (gamePaused)
+            DrawText("GAME PAUSED", screenWidth / 2 - MeasureText("GAME PAUSED", 40) / 2, screenHeight / 2 - 40, 40, WHITE);
     } else {
         DrawText("GAME OVER", GetScreenWidth() / 2 - MeasureText("GAME OVER", 20) / 2, GetScreenHeight() / 2 - 50, 20, WHITE);
         if (flags_runtime & RUNTIME_WINDOW_ACTIVE && !(flags_cmd & CMD_FLAG_USE_NEURAL || flags_cmd & CMD_FLAG_MANAGED)) {
-            DrawText("PRESS [ENTER] TO PLAY AGAIN", GetScreenWidth() / 2 - MeasureText("PRESS [ENTER] TO PLAY AGAIN", 20) / 2, GetScreenHeight() / 2 - 10, 20, WHITE);
+            DrawText("PRESS [ENTER] TO PLAY AGAIN", GetScreenWidth() / 2 - MeasureText("PRESS [ENTER] TO PLAY AGAIN", 20) / 2,
+                     GetScreenHeight() / 2 - 10, 20, WHITE);
         }
     }
 
@@ -748,9 +845,12 @@ void DrawGame(void) {
 }
 
 // unload game variables
-void UnloadGame(void) {
+void UnloadGame(void)
+{
     // close shared memory (if any)
-    CloseSharedMemory();
+    if (flags_cmd & CMD_FLAG_USE_NEURAL) {
+        CloseSharedMemory();
+    }
 
     // clear all dynamic structures
     xArray_clear(asteroids);
