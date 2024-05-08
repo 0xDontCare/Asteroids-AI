@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-FnnModel *fnn_new()
+FnnModel *fnn_new(void)
 {
   // memory allocation
   FnnModel *model = (FnnModel *)malloc(sizeof(FnnModel));
