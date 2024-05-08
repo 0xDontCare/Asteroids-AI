@@ -1,13 +1,3 @@
-/**
- * @file commonUtility.c
- * @author 0xDontCare (https://github.com/0xDontCare)
- * @brief Implementations of functions declared in commonUtility.h
- * @version 0.2
- * @date 04.12.2023.
- *
- * @copyright Copyright (c) 2023
- *
- */
 #include "commonUtility.h"
 
 #include <stddef.h>

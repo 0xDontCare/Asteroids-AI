@@ -2,10 +2,10 @@
  * @file commonUtility.h
  * @author 0xDontCare (https://github.com/0xDontCare)
  * @brief Common utility functions for all three programs (manager, game and network). All functions have prefix `cu_`.
- * @version 0.2
- * @date 04.12.2023.
+ * @version 0.3
+ * @date 08.05.2024.
  *
- * @copyright All rights reserved (c) 2023
+ * @copyright All rights reserved (c) 2024
  *
  */
 
@@ -31,7 +31,7 @@ int cu_CStringCompare(const char *str1, const char *str2);
  * @param string Pointer to null-terminated string containing the string to check.
  * @param suffix Pointer to null-terminated string containing the suffix to search.
  * @return 1 if string ends with suffix, 0 otherwise.
- * 
+ *
  * @note If string or suffix is NULL, function returns 0 as if it failed the test.
  */
 int cu_CStringEndsWith(const char *string, const char *suffix);
