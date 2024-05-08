@@ -1,35 +1,52 @@
 /**
- * @file main.h
+ * @file managerMain.h
  * @author 0xDontCare (https://github.com/0xDontCare)
  * @brief Manager program related enums, structs, etc.
- * @version 0.1
- * @date 13.12.2023.
+ * @version 0.3
+ * @date 08.05.2024.
  *
- * @copyright All rights reserved (c) 2023
+ * @copyright All rights reserved (c) 2024
  *
  */
 
-#ifndef MAIN_H
-#define MAIN_H
+#ifndef MANMAIN_H
+#define MANMAIN_H
 
-enum runtimeFlags_e {
-    RUNTIME_UNSET = 0x00,
-    RUNTIME_SINGLE_INSTANCE = 0x01,
-    RUNTIME_MULTI_INSTANCE = 0x02,
-    RUNTIME_EXIT = 0x04,
-    RUNTIME_TRAINING = 0x08,
-    RUNTIME_SHARED_MEMORY_READY = 0x10
+#include <inttypes.h>
+#include <unistd.h>
+
+#define ASTROMGR_VER "0.2"
+
+#define FITNESS_WEIGHT_SCORE 0.5f
+#define FITNESS_WEIGHT_TIME 0.2f
+#define FITNESS_WEIGHT_LEVEL 0.3f
+
+enum instanceStatus_e {
+    INSTANCE_INACTIVE = 0x00,
+    INSTANCE_WAITING = 0x01,
+    INSTANCE_RUNNING = 0x02,
+    INSTANCE_FINISHED = 0x04,
+    INSTANCE_ERRORED = 0x08,
+    INSTANCE_ENDED = 0x10,
+    INSTANCE_ERRENDED = 0x20
 };
 
-enum instanceFlags_e {
-    INSTANCE_UNSET = 0x00,
-    INSTANCE_USING_GAME = 0x01,
-    INSTANCE_USING_AI = 0x02,
-    INSTANCE_HAS_SHARED_MEMORY = 0x04,
-    INSTANCE_IS_RUNNING = 0x08,
-    INSTANCE_IS_PAUSED = 0x10,
-    INSTANCE_IS_HEADLESS = 0x20,
-    INSTANCE_HAS_ENDED = 0x40
-};
+// instance descriptor which holds all the necessary information about one instance (game-AI pair)
+typedef struct {
+    uint32_t instanceID;                   // unique instance ID
+    enum instanceStatus_e instanceStatus;  // status of the instance
 
-#endif /* MAIN_H */
+    pid_t gamePID;  // game process ID
+    pid_t aiPID;    // AI process ID
+
+    uint32_t sharedMemoryID;  // shared memory ID
+    char shmemInput[255];     // input shared memory key
+    char shmemOutput[255];    // output shared memory key
+    char shmemStatus[255];    // status shared memory key
+
+    char *modelPath;      // path to the model file
+    uint32_t generation;  // generation number
+    float fitnessScore;   // fitness score
+} managerInstance_t;
+
+#endif /* MANMAIN_H */
