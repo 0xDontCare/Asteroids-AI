@@ -33,6 +33,7 @@ pid_t pid_neurons = 0;  // process ID of neural network program (used for sendin
 static char *cmd_shInputName = NULL;
 static char *cmd_shOutputName = NULL;
 static char *cmd_shStateName = NULL;
+static char *cmd_nmodelPath = NULL;
 static struct sharedInput_s *shInput = NULL;
 static struct sharedOutput_s *shOutput = NULL;
 static struct sharedState_s *shState = NULL;
@@ -92,14 +93,6 @@ int main(int argc, char *argv[])
                 flags_cmd |= CMD_FLAG_STANDALONE;
             } else if (xString_isEqualCString(tmpString, "-H") || xString_isEqualCString(tmpString, "--headless")) {
                 flags_cmd |= CMD_FLAG_HEADLESS;
-            } else if (xString_isEqualCString(tmpString, "-n") || xString_isEqualCString(tmpString, "--neural")) {
-                if (i + 2 >= argc)
-                    break;
-
-                flags_cmd |= CMD_FLAG_USE_NEURAL;
-                cmd_shInputName = argv[i + 1];
-                cmd_shOutputName = argv[i + 2];
-                i += 2;
             } else if (xString_isEqualCString(tmpString, "-m") || xString_isEqualCString(tmpString, "--managed")) {
                 if (i + 3 >= argc)
                     break;
@@ -109,10 +102,24 @@ int main(int argc, char *argv[])
                 cmd_shOutputName = argv[i + 2];
                 cmd_shStateName = argv[i + 3];
                 i += 3;
+            } else if (xString_isEqualCString(tmpString, "-nr") || xString_isEqualCString(tmpString, "--neural-random")) {
+                flags_cmd |= CMD_FLAG_USE_NEURAL | CMD_FLAG_NEURAL_RANDOM;
+                cmd_shInputName = "asteroids0_in";
+                cmd_shOutputName = "asteroids0_out";
+            } else if (xString_isEqualCString(tmpString, "-nl") || xString_isEqualCString(tmpString, "--neural-load")) {
+                if (i + 1 >= argc)
+                    break;
+
+                flags_cmd |= CMD_FLAG_USE_NEURAL | CMD_FLAG_NEURAL_FILE;
+                cmd_shInputName = "asteroids0_in";
+                cmd_shOutputName = "asteroids0_out";
+                cmd_nmodelPath = argv[i + 1];
+                i += 1;
             } else if (xString_isEqualCString(tmpString, "-r") || xString_isEqualCString(tmpString, "--random")) {
                 if (i + 1 > argc || !cu_CStringIsNumeric(argv[i + 1]))
                     break;
 
+                srand((unsigned int)atoi(argv[i + 1]));
                 SetRandomSeed((unsigned int)atoi(argv[i + 1]));
 
                 i += 1;
@@ -164,7 +171,8 @@ int main(int argc, char *argv[])
         printf("  -v, --version\t\t\t\t\tPrint version information and exit.\n");
         printf("  -s, --standalone\t\t\t\tRun game in standalone mode (no external manager program).\n");
         printf("  -H, --headless\t\t\t\tRun game in headless mode (no window). Use together with --managed\n");
-        printf("  -n, --neural <input> <output>\t\t\tRun game in neural network mode (input and output shared memory names).\n");
+        printf("  -nr, --neural-random\t\t\t\tRun game with randomly initialized neural network.\n");
+        printf("  -nl, --neural-load <model>\t\t\tRun game with neural network loaded from .fnnm model file.\n");
         printf(
             "  -m, --managed <input> <output> <state>\tRun game in managed mode (input, output and state shared memory names).\n");
         printf("  -r, --random <seed>\t\t\t\tSet random seed for game initialization.\n");
@@ -209,7 +217,13 @@ int main(int argc, char *argv[])
 
     if (flags_cmd & CMD_FLAG_STANDALONE && flags_cmd & CMD_FLAG_USE_NEURAL) {
         // prepare arguments for neural network program
-        char *argvNeural[] = {"./bin/neurons", "-s", cmd_shInputName, cmd_shOutputName, NULL};
+        char *argvNeural[] = {"./bin/neurons",
+                              "-s",
+                              cmd_shInputName,
+                              cmd_shOutputName,
+                              (flags_cmd & CMD_FLAG_NEURAL_FILE) ? "-l" : NULL,
+                              (flags_cmd & CMD_FLAG_NEURAL_FILE) ? cmd_nmodelPath : NULL,
+                              NULL};
 
         // fork process for neural network
         pid_neurons = fork();

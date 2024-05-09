@@ -33,6 +33,8 @@ enum cmdFlag_e {
     CMD_FLAG_HEADLESS = 0x08,
     CMD_FLAG_USE_NEURAL = 0x10,
     CMD_FLAG_MANAGED = 0x20,
+    CMD_FLAG_NEURAL_RANDOM = 0x40,
+    CMD_FLAG_NEURAL_FILE = 0x80
 };
 
 /* Control input flags
