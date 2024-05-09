@@ -34,6 +34,7 @@ static void instance_free(managerInstance_t *descriptor);
 static int instance_start(managerInstance_t *descriptor);
 
 static int removeDirectoryContent(char *folderPath);          // remove all files from directory
+static void instance_writeReport(xArray *descriptorArray);    // write execution report to CSV file
 static void *instance_starter(xArray *descriptorArray);       // worker thread for automatic instance starting
 static void *instance_statusUpdate(xArray *descriptorArray);  // worker thread for automatic instance status updating
 
@@ -52,6 +53,7 @@ xDictionary *instanceShmemOut = NULL;                     // dictionary of outpu
 xDictionary *instanceShmemStat = NULL;                    // dictionary of status shared memory pointers
 pthread_mutex_t globalMutex = PTHREAD_MUTEX_INITIALIZER;  // global mutex for shared memory access
 uint32_t maxParallelInstances = 0;                        // maximum number of parallel instances
+char *populationFolder = NULL;                            // path to current population folder
 
 // worker threads
 pthread_t starterThread;  // automatic instance starting
@@ -273,8 +275,7 @@ void mmenu_createPopulation(void)
     }
     activationFunctions[hiddenLayerCount] = FNN_ACTIVATION_SIGMOID;
 
-    // generate random neural netwprk models for initial generation for given
-    // parameters
+    // generate random neural netwprk models for initial generation for given parameters
     for (uint32_t i = 0; i < genSize; i++) {
         // create model descriptor
         FnnModel *model = fnn_new();
@@ -364,7 +365,6 @@ void mmenu_loadPopulation(void)
     }
 
     // ask user for folder name (name of population to load)
-    char *folderName = NULL;
     printf("Enter folder name (population name): ");
     inputStr = xString_readInSafe(26);
     if (inputStr == NULL || xString_isEmpty(inputStr)) {
@@ -372,13 +372,13 @@ void mmenu_loadPopulation(void)
         errorFlag = 1;
         return;
     } else {
-        folderName = xString_toCString(inputStr);
+        populationFolder = xString_toCString(inputStr);
         xString_free(inputStr);
     }
 
     // check if folder with given name exists
     struct stat st = {0};
-    if (stat(folderName, &st) == -1) {
+    if (stat(populationFolder, &st) == -1) {
         printf("Folder with given name does not exist.\n");
         return;
     }
@@ -392,7 +392,7 @@ void mmenu_loadPopulation(void)
     xString *filePath = xString_new();
 
     // open directory
-    DIR *dir = opendir(folderName);
+    DIR *dir = opendir(populationFolder);
     if (dir == NULL) {
         perror("opendir() error");
         errorFlag = 2;
@@ -419,7 +419,7 @@ void mmenu_loadPopulation(void)
 
         // construct file path and add to model array
         xString_remove(filePath, 0, filePath->len);
-        xString_appendCString(filePath, folderName);
+        xString_appendCString(filePath, populationFolder);
         xString_appendChar(filePath, '/');
         xString_appendCString(filePath, entry->d_name);
         instance->modelPath = xString_toCString(filePath);
@@ -823,6 +823,54 @@ int removeDirectoryContent(char *folderPath)
     return 0;
 }
 
+void instance_writeReport(xArray *descriptorArray)
+{
+    // local variables
+    FILE *reportFile = NULL;
+    xString *constructFileName = xString_new();
+    char *finalFileName = NULL;
+    xString *tmp1 = NULL;
+    xString *tmp2 = NULL;
+
+    // create report file name (report_GenerationName.csv)
+    tmp1 = xString_fromCString(populationFolder);
+    xString_appendString(constructFileName, tmp1);
+    xString_remove(tmp1, tmp1->len - 1, tmp1->len);
+    tmp2 = xString_substring(tmp1, xString_findLastChar(tmp1, '/') + 1, tmp1->len);
+    xString_appendCString(constructFileName, "/report_");
+    xString_appendString(constructFileName, tmp2);
+    xString_appendCString(constructFileName, ".csv");
+
+    finalFileName = xString_toCString(constructFileName);
+    xString_free(constructFileName);
+    xString_free(tmp1);
+    xString_free(tmp2);
+
+    // try to open file for appending, if it does not exist, create it and write header
+    reportFile = fopen(finalFileName, "a");
+    if (reportFile == NULL) {
+        reportFile = fopen(finalFileName, "w");
+        if (reportFile == NULL) {
+            perror("fopen() error");
+            errorFlag = 1;
+            return;
+        }
+        fprintf(reportFile, "InstanceID,Status,ModelPath,Generation,FitnessScore\n");
+    }
+
+    // write data
+    pthread_mutex_lock(&globalMutex);
+    for (int i = 0; i < descriptorArray->size; i++) {
+        managerInstance_t *instance = (managerInstance_t *)xArray_get(descriptorArray, i);
+        fprintf(reportFile, "%d,%d,%s,%d,%f\n", instance->instanceID, instance->instanceStatus, instance->modelPath,
+                instance->generation, instance->fitnessScore);
+    }
+    pthread_mutex_unlock(&globalMutex);
+
+    fclose(reportFile);
+    free(finalFileName);
+}
+
 void *instance_starter(xArray *descriptorArray)
 {
     uint32_t runningInstances = 0;
@@ -913,6 +961,8 @@ void *instance_starter(xArray *descriptorArray)
         pthread_mutex_unlock(&globalMutex);
 
         if (allEnded) {
+            // if all instances have ended, write report file and exit
+            instance_writeReport(descriptorArray);
             break;
         }
 
