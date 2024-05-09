@@ -134,11 +134,6 @@ int main(int argc, char *argv[])
         flags_cmd |= CMD_FLAG_STANDALONE;
     }
 
-    if ((flags_cmd & (CMD_FLAG_STANDALONE | CMD_FLAG_MANAGED)) == 0) {
-        // no run mode specified, defaulting to standalone mode
-        flags_cmd |= CMD_FLAG_STANDALONE;
-    }
-
     // check for flag conflicts
     if ((flags_cmd & CMD_FLAG_STANDALONE &&
          flags_cmd & CMD_FLAG_HEADLESS) ||  // standalone and headless mode cannot be used at the same time
@@ -153,6 +148,12 @@ int main(int argc, char *argv[])
         printf("ERROR: Invalid command line arguments.\n");
         printf("Use %s --help for more information.\n", argv[0]);
         return 1;
+    }
+
+    // if game is started with no arguments, assume standalone mode (player control)
+    if ((flags_cmd & (CMD_FLAG_STANDALONE | CMD_FLAG_MANAGED)) == 0) {
+        // no run mode specified, defaulting to standalone mode
+        flags_cmd |= CMD_FLAG_STANDALONE;
     }
 
     // parse set command flags (help and version; others affect later execution)
