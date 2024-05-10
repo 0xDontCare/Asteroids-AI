@@ -120,7 +120,7 @@ int main(int argc, char *argv[])
                     break;
 
                 srand((unsigned int)atoi(argv[i + 1]));
-                SetRandomSeed((unsigned int)atoi(argv[i + 1]));
+                //SetRandomSeed((unsigned int)atoi(argv[i + 1]));
 
                 i += 1;
             } else {
@@ -446,7 +446,7 @@ inline void PregenAsteroids(void)
         while (!validRange) {
             if ((posx > screenWidth / 2 - 150 && posx < screenWidth / 2 + 150) || (fabsf(player.position.x - posx) < 20.f)) {
                 // asteroid is too close to screen edge or player
-                posx = GetRandomValue(0, screenWidth);
+                posx = rand() % screenWidth;
             } else {
                 validRange = true;
             }
@@ -455,12 +455,12 @@ inline void PregenAsteroids(void)
         while (!validRange) {
             if ((posy > screenHeight / 2 - 150 && posy < screenHeight / 2 + 150) || (fabsf(player.position.y - posy) < 20.f)) {
                 // asteroid is too close to screen edge or player
-                posy = GetRandomValue(0, screenHeight);
+                posy = rand() % screenHeight;
             } else {
                 validRange = true;
             }
         }
-        float randomAngle = GetRandomValue(0, 360) * DEG2RAD;
+        float randomAngle = (rand() & 360) * DEG2RAD;
 
         newAsteroid->position = (Vector2){posx, posy};
         newAsteroid->speed = Vector2Scale((Vector2){cosf(randomAngle), sinf(randomAngle)}, ASTEROID_SPEED);
