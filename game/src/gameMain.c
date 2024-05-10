@@ -79,6 +79,9 @@ static void UnloadGame(void);                 // unload game (free dynamic struc
 
 int main(int argc, char *argv[])
 {
+    // Seeding PRNG for case if it doesn't get seeded by command line argument
+    srand((unsigned int)time(NULL));
+
     // Parsing command line arguments
     //--------------------------------------------------------------------------------------
     if (argc > 1) {
