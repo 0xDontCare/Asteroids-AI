@@ -67,6 +67,9 @@ float (*activationTable[])(float) = {activation_none, activation_sigmoid, activa
 
 int main(int argc, char *argv[])
 {
+    // seed random number generator
+    srand((unsigned int)time(NULL) ^ (unsigned int)rand());
+
     // parsing command line arguments
     if (argc == 1) {
         printf("No command line arguments provided.\n");
@@ -312,7 +315,6 @@ inline void UpdateSharedOutput(void)
 // fill matrix with random values in from uniform distribution
 void fillUniform(xMatrix *mat, float min, float max)
 {
-    srand((unsigned int)time(NULL) ^ (unsigned int)rand());
     for (uint32_t i = 0; i < mat->rows; i++) {
         for (uint32_t j = 0; j < mat->cols; j++) {
             xMatrix_set(mat, i, j, min + (max - min) * rand() / (float)RAND_MAX);
@@ -323,7 +325,6 @@ void fillUniform(xMatrix *mat, float min, float max)
 // fill matrix with random values from normal distribution
 void fillNormal(xMatrix *mat, float mean, float stddev)
 {
-    srand((unsigned int)time(NULL) ^ (unsigned int)rand());
     for (uint32_t i = 0; i < mat->rows; i++) {
         for (uint32_t j = 0; j < mat->cols; j++) {
             xMatrix_set(mat, i, j, normalRandom(mean, stddev));
