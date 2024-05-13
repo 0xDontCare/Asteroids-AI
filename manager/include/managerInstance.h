@@ -147,4 +147,11 @@ void mInstancer_setMaxParallel(uint32_t value);
  */
 void mInstancer_setMaxIterations(uint32_t value);
 
+/**
+ * @brief Set number of iterations before reseeding game environment for training
+ * 
+ * @param value Number of iterations (if 0, reseeding is disabled)
+ */
+void mInstancer_setEpochSize(uint32_t value);
+
 #endif  // MANINSTANCE_H

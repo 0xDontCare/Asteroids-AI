@@ -502,7 +502,7 @@ int cmd_populationLoad(void)
 
 int cmd_generationStart(void)
 {
-    // ask user for max parallel instances and evolution iterations
+    // ask user for max parallel instances, evolution iterations and epoch size
     printf("\tMax parallel instances: ");
     xString *parallelCountStr = xString_readInSafe(6);
     if (parallelCountStr == NULL) {
@@ -526,6 +526,18 @@ int cmd_generationStart(void)
     }
     mInstancer_setMaxIterations((uint32_t)xString_toInt(iterationCountStr));
     xString_free(iterationCountStr);
+
+    printf("\tEpoch size (iterations before updating training seed): ");
+    xString *epochSizeStr = xString_readInSafe(6);
+    if (epochSizeStr == NULL) {
+        return 1;
+    } else if (xString_isEmpty(epochSizeStr)) {
+        printf("\t[ERR]: Invalid epoch size\n");
+        xString_free(epochSizeStr);
+        return 0;
+    }
+    mInstancer_setEpochSize((uint32_t)xString_toInt(epochSizeStr));
+    xString_free(epochSizeStr);
 
     if (mInstancer_startPopulation() != 0) {
         printf("\t[ERR]: Failed to start generation\n");

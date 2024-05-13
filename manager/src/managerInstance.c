@@ -28,10 +28,11 @@ static xDictionary *shInDict = NULL;                         // dictionary of sh
 static xDictionary *shOutDict = NULL;                        // dictionary of shared memory output blocks
 static xDictionary *shStatDict = NULL;                       // dictionary of shared memory status blocks
 
-static uint32_t maxParallel = 0;    // maximum number of parallel instances
-static uint32_t maxIterations = 0;  // maximum number of iterations
-static uint32_t randSeed = 0;       // random seed for starting entire generation under same conditions
-static char *populationDir = NULL;  // path to the loaded population directory
+static uint32_t maxParallel = 0;      // maximum number of parallel instances
+static uint32_t maxIterations = 0;    // maximum number of iterations
+static uint32_t epochIterations = 0;  // number of iterations before updating seed for game randomization
+static uint32_t randSeed = 0;         // random seed for starting entire generation under same conditions
+static char *populationDir = NULL;    // path to the loaded population directory
 
 static bool instancesRunning = false;  // flag indicating if instances are running
 pthread_t thread_instanceStarter;
@@ -318,7 +319,6 @@ int32_t mInstancer_toggleHeadless(uint32_t instanceID)
 
     pthread_mutex_unlock(&instancerMutex);
     return 0;
-
 }
 
 const managerInstance_t *mInstancer_get(uint32_t instanceID)
@@ -359,6 +359,13 @@ void mInstancer_setMaxIterations(uint32_t value)
 
     pthread_mutex_lock(&instancerMutex);
     maxIterations = value;
+    pthread_mutex_unlock(&instancerMutex);
+}
+
+void mInstancer_setEpochSize(uint32_t value)
+{
+    pthread_mutex_lock(&instancerMutex);
+    epochIterations = value;
     pthread_mutex_unlock(&instancerMutex);
 }
 
@@ -670,6 +677,11 @@ static void *thr_instanceStarter(void *arg)
         uint32_t nextStarting = 0;
         uint32_t runningInstances = 0;
         bool allEnded = false;
+
+        if (epochIterations > 0 && iteration % epochIterations == 0) {
+            srand((unsigned int)time(NULL) ^ (unsigned int)rand());
+            randSeed = (uint32_t)rand();
+        }
 
         // set all loaded instances to waiting state
         pthread_mutex_lock(&instancerMutex);
