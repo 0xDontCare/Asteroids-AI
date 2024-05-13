@@ -391,8 +391,8 @@ int cmd_populationCreate(void)
     popSize = (uint32_t)xString_toInt(popSizeStr);
     xString_free(popSizeStr);
 
-    if (popSize == 0) {
-        printf("\t[ERR]: Population size cannot be zero\n");
+    if (popSize < 3) {
+        printf("\t[ERR]: Population must have at least 3 individuals");
         free(popPath);
         return 0;
     }
@@ -546,12 +546,11 @@ int cmd_generationStatus(void)
     }
 
     // print population information
-    printf("ID  | MemID      | Status | Game PID | AI PID | Model path                     | Generation | Fitness score\n");
+    printf("ID  | Status | Game PID | AI PID | Model path                     | Generation | Fitness score\n");
     for (int32_t i = 0; i < descriptors->size; i++) {
         const managerInstance_t *instance = (const managerInstance_t *)xArray_get(descriptors, i);
-        printf("%3d | %10u | %6x |   %6d | %6d | %-30s | %10d | %11.2f\n", instance->instanceID, instance->sharedMemoryID,
-               instance->status, instance->gamePID, instance->aiPID, instance->modelPath, instance->generation,
-               instance->fitnessScore);
+        printf("%3d | %6x |   %6d | %6d | %-30s | %10d | %11.2f\n", instance->instanceID, instance->status, instance->gamePID,
+               instance->aiPID, instance->modelPath, instance->generation, instance->fitnessScore);
     }
 
     return 0;
@@ -579,15 +578,14 @@ int cmd_instanceStatus(void)
     }
 
     printf("\t[ Instance %u ]\n"
-           "\tShared memory ID: %u\n"
            "\tStatus: %x\n"
            "\tGame PID: %d\n"
            "\tAI PID: %d\n"
            "\tModel: %s\n"
            "\tGeneration: %d\n"
            "\tFitness score: %.2f\n",
-           instance->instanceID, instance->sharedMemoryID, instance->status, instance->gamePID, instance->aiPID,
-           instance->modelPath, instance->generation, instance->fitnessScore);
+           instance->instanceID, instance->status, instance->gamePID, instance->aiPID, instance->modelPath, instance->generation,
+           instance->fitnessScore);
 
     return 0;
 }
@@ -619,7 +617,24 @@ int cmd_instanceKill(void)
 
 int cmd_instanceShow(void)
 {
-    printf("\tShowing instance details...\n");
+    // ask user for instance ID to toggle headless mode
+    printf("\tInstance ID: ");
+    xString *instanceIDStr = xString_readInSafe(6);
+    if (instanceIDStr == NULL) {
+        return 1;
+    } else if (xString_isEmpty(instanceIDStr)) {
+        printf("\t[ERR]: Invalid instance ID\n");
+        xString_free(instanceIDStr);
+        return 0;
+    }
+    uint32_t instanceID = (uint32_t)xString_toInt(instanceIDStr);
+    xString_free(instanceIDStr);
+
+    if (mInstancer_toggleHeadless(instanceID) != 0) {
+        printf("\t[ERR]: Failed to toggle headless mode\n");
+        return 1;
+    }
+
     return 0;
 }
 

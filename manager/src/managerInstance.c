@@ -24,15 +24,16 @@
 
 pthread_mutex_t instancerMutex = PTHREAD_MUTEX_INITIALIZER;  // instance manager mutex
 static xArray *descriptors = NULL;                           // array of loaded instance descriptors
-static xDictionary *shInDict = NULL;                         // shared memory input dictionary
-static xDictionary *shOutDict = NULL;                        // shared memory output dictionary
-static xDictionary *shStatDict = NULL;                       // shared memory status dictionary
+static xDictionary *shInDict = NULL;                         // dictionary of shared memory input blocks
+static xDictionary *shOutDict = NULL;                        // dictionary of shared memory output blocks
+static xDictionary *shStatDict = NULL;                       // dictionary of shared memory status blocks
 
 static uint32_t maxParallel = 0;    // maximum number of parallel instances
 static uint32_t maxIterations = 0;  // maximum number of iterations
 static uint32_t randSeed = 0;       // random seed for starting entire generation under same conditions
 static char *populationDir = NULL;  // path to the loaded population directory
 
+static bool instancesRunning = false;  // flag indicating if instances are running
 pthread_t thread_instanceStarter;
 
 //------------------------------------------------------------------------------------
@@ -52,9 +53,9 @@ static int fCopy(const char *src, const char *dest);
 
 int32_t mInstancer_init(void)
 {
-    (void)instance_compare;  // suppress unused function warning
-    (void)fCopy;             // suppress unused function warning
-    randSeed = rand();
+    //(void)instance_compare;  // suppress unused function warning
+    //(void)fCopy;             // suppress unused function warning
+    srand((unsigned int)time(NULL) ^ (unsigned int)rand());
 
     if ((descriptors = xArray_new()) == NULL) {
         return 1;
@@ -79,13 +80,45 @@ int32_t mInstancer_init(void)
 
 void mInstancer_cleanup(void)
 {
+    // stop worker thread if running
     mInstancer_stopPopulation();
 
-    xArray_forEach(descriptors, (void (*)(void *))instance_free);
+    pthread_mutex_lock(&instancerMutex);
+
+    // free all shared memory blocks and instance descriptors
+    for (int i = 0; i < descriptors->size; i++) {
+        managerInstance_t *instance = (managerInstance_t *)xArray_get(descriptors, i);
+
+        struct sharedInput_s *shIn = (struct sharedInput_s *)xDictionary_remove(shInDict, cu_CStringHash(instance->shmemInput));
+        if (shIn != NULL) {
+            sm_freeSharedInput(shIn, instance->shmemInput);
+        }
+        struct sharedOutput_s *shOut =
+            (struct sharedOutput_s *)xDictionary_remove(shOutDict, cu_CStringHash(instance->shmemOutput));
+        if (shOut != NULL) {
+            sm_freeSharedOutput(shOut, instance->shmemOutput);
+        }
+        struct sharedState_s *shStat =
+            (struct sharedState_s *)xDictionary_remove(shStatDict, cu_CStringHash(instance->shmemStatus));
+        if (shStat != NULL) {
+            sm_freeSharedState(shStat, instance->shmemStatus);
+        }
+
+        instance_free(instance);
+    }
+
+    // free all instancer structures
     xArray_free(descriptors);
     xDictionary_free(shInDict);
     xDictionary_free(shOutDict);
     xDictionary_free(shStatDict);
+
+    descriptors = NULL;
+    shInDict = NULL;
+    shOutDict = NULL;
+    shStatDict = NULL;
+
+    pthread_mutex_unlock(&instancerMutex);
 }
 
 int32_t mInstancer_loadPopulation(const char *populationPath)
@@ -177,9 +210,17 @@ int32_t mInstancer_loadPopulation(const char *populationPath)
 int32_t mInstancer_startPopulation(void)
 {
     // if population is not loaded, or thread is already running, return failure
-    if (descriptors == NULL || descriptors->size == 0 || thread_instanceStarter != 0) {
+    if (descriptors == NULL || descriptors->size == 0 || instancesRunning) {
         return 1;
     }
+
+    // clear old thread if left finished but not joined
+    pthread_mutex_lock(&instancerMutex);
+    if (!instancesRunning && thread_instanceStarter != 0) {
+        pthread_join(thread_instanceStarter, NULL);
+        thread_instanceStarter = 0;
+    }
+    pthread_mutex_unlock(&instancerMutex);
 
     // start worker thread to manage running instances
     pthread_create(&thread_instanceStarter, NULL, thr_instanceStarter, NULL);
@@ -190,7 +231,7 @@ int32_t mInstancer_startPopulation(void)
 int32_t mInstancer_stopPopulation(void)
 {
     // if thread is not running, return failure
-    if (thread_instanceStarter == 0) {
+    if (thread_instanceStarter == 0 || !instancesRunning) {
         return 1;
     }
 
@@ -207,6 +248,16 @@ int32_t mInstancer_stopPopulation(void)
         managerInstance_t *instance = (managerInstance_t *)xArray_get(descriptors, i);
         if (instance->status & (INSTANCE_FINISHED | INSTANCE_RUNNING | INSTANCE_WAITING)) {
             instance->status = INSTANCE_ERRORED;
+        }
+        struct sharedState_s *shStat = (struct sharedState_s *)xDictionary_get(shStatDict, cu_CStringHash(instance->shmemStatus));
+        if (shStat != NULL) {
+            sm_lockSharedState(shStat);
+            shStat->control_gameExit = true;
+            shStat->control_neuronsExit = true;
+            sm_unlockSharedState(shStat);
+
+            waitpid(instance->gamePID, NULL, 0);
+            waitpid(instance->aiPID, NULL, 0);
         }
     }
     pthread_mutex_unlock(&instancerMutex);
@@ -237,6 +288,37 @@ int32_t mInstancer_killIndividual(uint32_t instanceID)
 
     pthread_mutex_unlock(&instancerMutex);
     return 0;
+}
+
+int32_t mInstancer_toggleHeadless(uint32_t instanceID)
+{
+    // if instancer is not initialized or instanceID is out of bounds, return failure
+    if (descriptors == NULL || descriptors->size == 0 || instanceID >= (uint32_t)descriptors->size) {
+        return 1;
+    }
+
+    pthread_mutex_lock(&instancerMutex);
+    managerInstance_t *instance = (managerInstance_t *)xArray_get(descriptors, (int)instanceID);
+
+    // if instance is not running return failure
+    if ((instance->status & INSTANCE_RUNNING) == 0) {
+        pthread_mutex_unlock(&instancerMutex);
+        return 1;
+    }
+
+    // toggle headless mode
+    struct sharedState_s *shStat = (struct sharedState_s *)xDictionary_get(shStatDict, cu_CStringHash(instance->shmemStatus));
+    if (shStat == NULL) {
+        pthread_mutex_unlock(&instancerMutex);
+        return 1;
+    }
+    sm_lockSharedState(shStat);
+    shStat->game_runHeadless = !shStat->game_runHeadless;
+    sm_unlockSharedState(shStat);
+
+    pthread_mutex_unlock(&instancerMutex);
+    return 0;
+
 }
 
 const managerInstance_t *mInstancer_get(uint32_t instanceID)
@@ -289,7 +371,7 @@ static managerInstance_t *instance_new(char *modelPath)
     if (modelPath == NULL) {
         return NULL;
     }
-    unsigned long long pathHash = cu_CStringHash(modelPath);
+    // unsigned long long pathHash = cu_CStringHash(modelPath);
     const char *filenameStart = modelPath + cu_CStringLength(modelPath);
     while (filenameStart > modelPath && *(filenameStart - 1) != '/') {
         filenameStart--;
@@ -306,7 +388,6 @@ static managerInstance_t *instance_new(char *modelPath)
     instance->status = INSTANCE_INACTIVE;
     instance->gamePID = -1;
     instance->aiPID = -1;
-    instance->sharedMemoryID = (uint32_t)pathHash ^ (uint32_t)(pathHash >> 32);
     instance->modelPath = modelPath;
     instance->generation = 0;
     instance->fitnessScore = 0.0f;
@@ -344,19 +425,6 @@ static void instance_free(managerInstance_t *instance)
         instance->modelPath = NULL;
     }
 
-    pthread_mutex_lock(&instancerMutex);
-    struct sharedInput_s *shIn = (struct sharedInput_s *)xDictionary_remove(shInDict, instance->sharedMemoryID);
-    struct sharedOutput_s *shOut = (struct sharedOutput_s *)xDictionary_remove(shOutDict, instance->sharedMemoryID);
-    struct sharedState_s *shStat = (struct sharedState_s *)xDictionary_remove(shStatDict, instance->sharedMemoryID);
-
-    if (shIn != NULL)
-        sm_freeSharedInput(shIn, instance->shmemInput);
-    if (shOut != NULL)
-        sm_freeSharedOutput(shOut, instance->shmemOutput);
-    if (shStat != NULL)
-        sm_freeSharedState(shStat, instance->shmemStatus);
-    pthread_mutex_unlock(&instancerMutex);
-
     free(instance);
 }
 
@@ -389,19 +457,33 @@ static int instance_start(uint32_t instanceID)
     }
 
     // create and initialize shared memory blocks
-    struct sharedInput_s *shIn = sm_allocateSharedInput(instance->shmemInput);
-    sm_initSharedInput(shIn);
-    struct sharedOutput_s *shOut = sm_allocateSharedOutput(instance->shmemOutput);
-    sm_initSharedOutput(shOut);
-    struct sharedState_s *shStat = sm_allocateSharedState(instance->shmemStatus);
-    sm_initSharedState(shStat);
+    struct sharedInput_s *shIn = (struct sharedInput_s *)xDictionary_get(shInDict, cu_CStringHash(instance->shmemInput));
+    if (shIn == NULL) {
+        shIn = sm_allocateSharedInput(instance->shmemInput);
+        sm_initSharedInput(shIn);
+        xDictionary_insert(shInDict, cu_CStringHash(instance->shmemInput), shIn);
+    } else {
+        sm_initSharedInput(shIn);
+    }
+
+    struct sharedOutput_s *shOut = (struct sharedOutput_s *)xDictionary_get(shOutDict, cu_CStringHash(instance->shmemOutput));
+    if (shOut == NULL) {
+        shOut = sm_allocateSharedOutput(instance->shmemOutput);
+        sm_initSharedOutput(shOut);
+        xDictionary_insert(shOutDict, cu_CStringHash(instance->shmemOutput), shOut);
+    } else {
+        sm_initSharedOutput(shOut);
+    }
+    struct sharedState_s *shStat = (struct sharedState_s *)xDictionary_get(shStatDict, cu_CStringHash(instance->shmemStatus));
+    if (shStat == NULL) {
+        shStat = sm_allocateSharedState(instance->shmemStatus);
+        sm_initSharedState(shStat);
+        xDictionary_insert(shStatDict, cu_CStringHash(instance->shmemStatus), shStat);
+    } else {
+        sm_initSharedState(shStat);
+    }
     shStat->state_managerAlive = true;
     shStat->game_runHeadless = true;
-
-    // insert shared memory blocks into dictionaries
-    xDictionary_insert(shInDict, (unsigned long long)instance->sharedMemoryID, (void *)shIn);
-    xDictionary_insert(shOutDict, (unsigned long long)instance->sharedMemoryID, (void *)shOut);
-    xDictionary_insert(shStatDict, (unsigned long long)instance->sharedMemoryID, (void *)shStat);
 
     // start game process
     pid_t gamePID = fork();
@@ -576,8 +658,13 @@ static void *thr_instanceStarter(void *arg)
 {
     (void)arg;  // ignore args
 
+    randSeed = (uint32_t)rand();
     uint32_t parallelMax = maxParallel;
     uint32_t iterationMax = maxIterations;
+
+    pthread_mutex_lock(&instancerMutex);
+    instancesRunning = true;
+    pthread_mutex_unlock(&instancerMutex);
 
     for (uint32_t iteration = 0; iteration < iterationMax; iteration++) {
         uint32_t nextStarting = 0;
@@ -623,7 +710,7 @@ static void *thr_instanceStarter(void *arg)
                         runningInstances--;
                     } else {
                         struct sharedState_s *shStat =
-                            (struct sharedState_s *)xDictionary_get(shStatDict, instance->sharedMemoryID);
+                            (struct sharedState_s *)xDictionary_get(shStatDict, cu_CStringHash(instance->shmemStatus));
                         sm_lockSharedState(shStat);
                         if (shStat->game_isOver) {
                             instance->status = INSTANCE_FINISHED;
@@ -640,17 +727,6 @@ static void *thr_instanceStarter(void *arg)
                     // wait for game and AI processes to exit
                     waitpid(instance->gamePID, NULL, 0);
                     waitpid(instance->aiPID, NULL, 0);
-
-                    // close shared memory blocks
-                    struct sharedInput_s *shIn = (struct sharedInput_s *)xDictionary_remove(shInDict, instance->sharedMemoryID);
-                    struct sharedOutput_s *shOut = (struct sharedOutput_s *)xDictionary_remove(shOutDict, instance->sharedMemoryID);
-                    struct sharedState_s *shStat = (struct sharedState_s *)xDictionary_remove(shStatDict, instance->sharedMemoryID);
-                    if (shIn != NULL)
-                        sm_freeSharedInput(shIn, instance->shmemInput);
-                    if (shOut != NULL)
-                        sm_freeSharedOutput(shOut, instance->shmemOutput);
-                    if (shStat != NULL)
-                        sm_freeSharedState(shStat, instance->shmemStatus);
 
                     // update instance status
                     instance->status = (instance->status & INSTANCE_FINISHED) ? INSTANCE_ENDED : INSTANCE_ERRENDED;
@@ -673,6 +749,10 @@ static void *thr_instanceStarter(void *arg)
             sleep(1);
         }
     }
+
+    pthread_mutex_lock(&instancerMutex);
+    instancesRunning = false;
+    pthread_mutex_unlock(&instancerMutex);
 
     return NULL;
 }

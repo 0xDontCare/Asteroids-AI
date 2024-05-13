@@ -34,10 +34,10 @@ typedef struct {
     pid_t gamePID;  // game process ID
     pid_t aiPID;    // AI process ID
 
-    uint32_t sharedMemoryID;  // shared memory ID
-    char shmemInput[255];     // input shared memory key
-    char shmemOutput[255];    // output shared memory key
-    char shmemStatus[255];    // status shared memory key
+    // uint32_t sharedMemoryID;  // shared memory ID
+    char shmemInput[255];   // input shared memory key
+    char shmemOutput[255];  // output shared memory key
+    char shmemStatus[255];  // status shared memory key
 
     char *modelPath;      // path to the model file
     uint32_t generation;  // generation number
@@ -103,6 +103,16 @@ int32_t mInstancer_stopPopulation(void);
  * @note Not to confuse with PID, instance ID is unique identifier of the instance in the manager
  */
 int32_t mInstancer_killIndividual(uint32_t instanceID);
+
+/**
+ * @brief Toggle headless mode for given instance
+ * 
+ * @param instanceID Instance ID to toggle headless mode
+ * @return 0 on success, 1 on failure
+ * 
+ * @note Headless mode can be toggled only on running instances
+ */
+int32_t mInstancer_toggleHeadless(uint32_t instanceID);
 
 /**
  * @brief Get instance descriptor information for given ID
