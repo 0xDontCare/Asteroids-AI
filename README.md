@@ -17,7 +17,7 @@ Neural network agent comes as standalone program which connects to the game usin
 - Loaded agent: The agent loads its model from a specially formatted file which contains all the information about layers, weights and biases
 
 ### Management program
-Management program is responsible for starting and handling multiple instances of the game-agent pairs running in parallel. It is capable of creating initial (random) generation of agents, evaluating their performance and creating new generations based on the best performing individuals (feature coming soon). The management program is also responsible for creating shared memory keys, handling them and passing them to the game and agent programs to work in sync. The program itself is just like a command line menu where user can select actions needed.
+Management program is responsible for starting and handling multiple instances of the game-agent pairs running in parallel. It is capable of creating initial (random) generation of agents, evaluating their performance and creating new generations based on the best performing individuals. The management program is also responsible for creating shared memory keys, handling them and passing them to the game and agent programs to work in sync. The program is implemented as shell interface with multiple commands that can be used to control the training process. For list of available commands and their usage, run `help` command within the management program.
 
 ## Installation
 ### Linux
@@ -86,7 +86,7 @@ Management program is responsible for starting and handling multiple instances o
 - [x] Fitness function (score, time)
 - [x] Crossover mechanism
 - [x] Mutation mechanism
-- [ ] Creating new networks from previous generation
+- [x] Creating new networks from previous generation
 
 ### Optionals 1.1
 - [ ] Add game menu screen
