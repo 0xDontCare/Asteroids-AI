@@ -280,17 +280,17 @@ int populationGenerate(const char *populationPath, uint32_t populationSize, uint
 int cmd_help(void)
 {
     printf("Available commands:\n"
-           "\thelp\t- show this help message\n"
-           "\tversion\t- show program version\n"
+           "\thelp\t\t- show this help message\n"
+           "\tversion\t\t- show program version\n"
            "\tpopcreate\t- create a new population\n"
-           "\tpopload\t- load a population from file\n"
-           "\tgenrun\t- start a new generation\n"
-           "\tgenstat\t- show generation status\n"
+           "\tpopload\t\t- load a population from file\n"
+           "\tgenrun\t\t- start a new generation\n"
+           "\tgenstat\t\t- show generation status\n"
            "\tinststat\t- show instance status\n"
            "\tinstkill\t- kill an instance\n"
-           "\tinstmon\t- show instance details\n"
-           "\tclear\t- clear the screen\n"
-           "\texit\t- exit the program\n"
+           "\tinstmon\t\t- show instance details\n"
+           "\tclear\t\t- clear the screen\n"
+           "\texit\t\t- exit the program\n"
            "\n");
 
     return 0;
