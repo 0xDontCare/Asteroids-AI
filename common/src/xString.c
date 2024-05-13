@@ -1028,7 +1028,7 @@ void xString_removeAllNewlines(xString *str)
 
 int xString_isEmpty(const xString *str) { return str ? str->len == 0 : 1; }
 
-int xString_compare(xString *str, xString *str2)
+int xString_compare(const xString *str, const xString *str2)
 {
     int result = 0;
     if (str && str2) {
@@ -1053,7 +1053,7 @@ int xString_compare(xString *str, xString *str2)
     return result;
 }
 
-int xString_compareCString(xString *str, char *cstr)
+int xString_compareCString(const xString *str, const char *cstr)
 {
     xString *str2 = xString_new();
     xString_appendCString(str2, cstr);
@@ -1062,7 +1062,7 @@ int xString_compareCString(xString *str, char *cstr)
     return result;
 }
 
-int xString_compareIgnoreCase(xString *str, xString *str2)
+int xString_compareIgnoreCase(const xString *str, const xString *str2)
 {
     int result = 0;
     if (str && str2) {
@@ -1105,7 +1105,7 @@ int xString_compareIgnoreCase(xString *str, xString *str2)
     return result;
 }
 
-int xString_compareIgnoreCaseCString(xString *str, char *cstr)
+int xString_compareIgnoreCaseCString(const xString *str, const char *cstr)
 {
     xString *str2 = xString_new();
     xString_appendCString(str2, cstr);
@@ -1114,7 +1114,7 @@ int xString_compareIgnoreCaseCString(xString *str, char *cstr)
     return result;
 }
 
-char *xString_toCString(xString *str)
+char *xString_toCString(const xString *str)
 {
     char *cstr = NULL;
     if (str) {

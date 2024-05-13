@@ -953,7 +953,7 @@ int xString_isEmpty(const xString *str);
  * @return int 0 if xString objects are equal, 1 if first xString object is
  * greater, -1 if second xString object is greater.
  */
-int xString_compare(xString *str, xString *str2);
+int xString_compare(const xString *str, const xString *str2);
 
 /**
  * @brief Lexicographically compare xString object and C string.
@@ -963,7 +963,7 @@ int xString_compare(xString *str, xString *str2);
  * @return int 0 if xString object and C string are equal, 1 if xString object
  * is greater, -1 if C string is greater.
  */
-int xString_compareCString(xString *str, char *cstr);
+int xString_compareCString(const xString *str, const char *cstr);
 
 /**
  * @brief Lexicographically compare two xString objects (case insensitive).
@@ -973,7 +973,7 @@ int xString_compareCString(xString *str, char *cstr);
  * @return int 0 if xString objects are equal, 1 if first xString object is
  * greater, -1 if second xString object is greater.
  */
-int xString_compareIgnoreCase(xString *str, xString *str2);
+int xString_compareIgnoreCase(const xString *str, const xString *str2);
 
 /**
  * @brief Lexicographically compare xString object and C string (case
@@ -984,7 +984,7 @@ int xString_compareIgnoreCase(xString *str, xString *str2);
  * @return int 0 if xString object and C string are equal, 1 if xString object
  * is greater, -1 if C string is greater.
  */
-int xString_compareIgnoreCaseCString(xString *str, char *cstr);
+int xString_compareIgnoreCaseCString(const xString *str, const char *cstr);
 
 /**
  * @brief Convert xString object to C string.
@@ -992,7 +992,7 @@ int xString_compareIgnoreCaseCString(xString *str, char *cstr);
  * @param str Input xString object.
  * @return char* Pointer to C string.
  */
-char *xString_toCString(xString *str);
+char *xString_toCString(const xString *str);
 
 /**
  * @brief Convert xString object content to lowercase.
