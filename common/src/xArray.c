@@ -2,6 +2,8 @@
 
 #include <stdlib.h>
 
+// DISABLED BECAUSE OF ISSUES
+/*
 static void xArray_quicksort(void *arrayData, int size, int (*comparator)(const void *a, const void *b))
 {
     if (size <= 1) {
@@ -32,6 +34,7 @@ static void xArray_quicksort(void *arrayData, int size, int (*comparator)(const 
     xArray_quicksort(p, (j - p) / sizeof(*p), comparator);
     xArray_quicksort(j + sizeof(*p), (pivot - j) / sizeof(*p), comparator);
 }
+*/
 
 xArray *xArray_new(void)
 {
@@ -109,7 +112,7 @@ void *xArray_pop(xArray *arr)
     return retItem;
 }
 
-void *xArray_get(xArray *arr, int index)
+void *xArray_get(const xArray *arr, int index)
 {
     void *retItem = NULL;
     if (arr && index >= 0 && index < arr->size) {
@@ -161,10 +164,20 @@ void xArray_clear(xArray *arr)
     }
 }
 
+// TODO: fix issues with quicksort
 void xArray_sort(xArray *arr, int (*comparator)(const void *, const void *))
 {
-    if (arr && comparator) {
-        xArray_quicksort(arr->data, arr->size, comparator);
+    if (!arr || !arr->data || !comparator) {
+        return;
+    }
+    // xArray_quicksort(arr->data, arr->size, comparator);
+
+    for(int i = 0; i < arr->size; i++) {
+        for(int j = i + 1; j < arr->size; j++) {
+            if(comparator(arr->data[i], arr->data[j]) > 0) {
+                xArray_swap(arr, i, j);
+            }
+        }
     }
 }
 

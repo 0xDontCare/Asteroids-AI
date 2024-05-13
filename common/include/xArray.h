@@ -2,10 +2,10 @@
  * @file xArray.h
  * @author 0xDontCare (https://github.com/0xDontCare)
  * @brief Dynamic array implementation in xStructures module.
- * @version 0.01
- * @date 16.10.2023.
+ * @version 0.01a
+ * @date 12.05.2024.
  *
- * @copyright All rights reserved (c) 2023
+ * @copyright All rights reserved (c) 2024
  *
  * Module declares dynamic array structure and functions for managing it. All functions have prefix `xArray_`.
  */
@@ -123,7 +123,7 @@ void *xArray_pop(xArray *arr);
  * All changes made to the item will be reflected in xArray.\
  *
  */
-void *xArray_get(xArray *arr, int index);
+void *xArray_get(const xArray *arr, int index);
 
 /**
  * @brief
