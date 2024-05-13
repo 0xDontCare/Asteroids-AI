@@ -641,6 +641,17 @@ static void *thr_instanceStarter(void *arg)
                     waitpid(instance->gamePID, NULL, 0);
                     waitpid(instance->aiPID, NULL, 0);
 
+                    // close shared memory blocks
+                    struct sharedInput_s *shIn = (struct sharedInput_s *)xDictionary_remove(shInDict, instance->sharedMemoryID);
+                    struct sharedOutput_s *shOut = (struct sharedOutput_s *)xDictionary_remove(shOutDict, instance->sharedMemoryID);
+                    struct sharedState_s *shStat = (struct sharedState_s *)xDictionary_remove(shStatDict, instance->sharedMemoryID);
+                    if (shIn != NULL)
+                        sm_freeSharedInput(shIn, instance->shmemInput);
+                    if (shOut != NULL)
+                        sm_freeSharedOutput(shOut, instance->shmemOutput);
+                    if (shStat != NULL)
+                        sm_freeSharedState(shStat, instance->shmemStatus);
+
                     // update instance status
                     instance->status = (instance->status & INSTANCE_FINISHED) ? INSTANCE_ENDED : INSTANCE_ERRENDED;
 
