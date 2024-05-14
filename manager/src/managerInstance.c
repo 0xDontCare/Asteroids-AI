@@ -334,9 +334,12 @@ const managerInstance_t *mInstancer_get(uint32_t instanceID)
 
 const xArray *mInstancer_getAll(void)
 {
+    pthread_mutex_lock(&instancerMutex);
     if (descriptors == NULL || descriptors->size == 0) {
+        pthread_mutex_unlock(&instancerMutex);
         return NULL;
     }
+    pthread_mutex_unlock(&instancerMutex);
     return (const xArray *)descriptors;
 }
 

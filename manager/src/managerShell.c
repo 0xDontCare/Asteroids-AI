@@ -547,7 +547,6 @@ int cmd_generationStart(void)
     return 0;
 }
 
-// TODO: fix segfaulting when called during next generation creation process
 int cmd_generationStatus(void)
 {
     // get loaded population descriptors
