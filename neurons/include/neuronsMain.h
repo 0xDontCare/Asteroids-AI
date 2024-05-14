@@ -40,6 +40,6 @@ enum neuronsRuntime_e { RUNTIME_NONE = 0x00, RUNTIME_RUNNING = 0x01, RUNTIME_PAU
 
 // ------------------------------------------------------------------
 // neural network constant definitions
-#define ACTIVATION_THRESHOLD 0.80f  // threshold for binary activation of network output
+#define ACTIVATION_THRESHOLD 0.70f  // threshold for binary activation of network output
 
 #endif  // MAIN_H
