@@ -31,6 +31,7 @@ static xDictionary *shStatDict = NULL;                       // dictionary of sh
 static uint32_t maxParallel = 0;      // maximum number of parallel instances
 static uint32_t maxIterations = 0;    // maximum number of iterations
 static uint32_t epochIterations = 0;  // number of iterations before updating seed for game randomization
+static uint32_t elitismCount = 0;     // number of best instances to keep in next generation
 static uint32_t randSeed = 0;         // random seed for starting entire generation under same conditions
 static char *populationDir = NULL;    // path to the loaded population directory
 
@@ -372,6 +373,19 @@ void mInstancer_setEpochSize(uint32_t value)
     pthread_mutex_unlock(&instancerMutex);
 }
 
+void mInstancer_setElitismCount(uint32_t value)
+{
+    pthread_mutex_lock(&instancerMutex);
+    if (descriptors == NULL || descriptors->size == 0) {
+        pthread_mutex_unlock(&instancerMutex);
+        return;
+    } else if (value > (uint32_t)descriptors->size) {
+        value = (uint32_t)descriptors->size - 1;
+    }
+    elitismCount = value;
+    pthread_mutex_unlock(&instancerMutex);
+}
+
 //------------------------------------------------------------------------------------
 // local function definitions
 
@@ -602,7 +616,7 @@ static int instance_nextgen(xArray *descriptorArray)
         sprintf(modelDest, "%s/model_%u.fnnm", genDir, i);
 
         // copy over two best models from previous generation
-        if (i < 2) {
+        if (i < elitismCount) {
             char *modelPath = ((managerInstance_t *)xArray_get(descriptorArray, i))->modelPath;
             fCopy(modelPath, modelDest);
             free(modelDest);
