@@ -27,7 +27,7 @@ Management program is responsible for starting and handling multiple instances o
 4. Run any of compiled programs (except management) with flag `--help` to see available options
 
 ### Windows
-- Not available (project currently heavily relies on POSIX headers and functions which are not available on Windows, easiest way to run the project on Windows is to use WSL or a virtual machine with Linux installed)
+- Not available (project currently heavily relies on POSIX functions which are not available on Windows, easiest way to run the project on Windows is to use WSL or a virtual machine with Linux installed)
 
 ## Game controls (in standalone mode)
 - `W` - Move forward
@@ -75,15 +75,13 @@ Management program is responsible for starting and handling multiple instances o
 - [x] Neural network architecture model
 - [x] Random agent (random actions)
 
-### Phase 2.1
-- [x] Management program
-- [x] Network serialization and deserialization
-- [x] Running multiple agents and games in parallel
-- [x] Creation of initial generation
-- [x] Evaluation of agents (score, time, level)
-
 ### Phase 3.0
+- [x] Network serialization and deserialization
+- [x] Management program
+- [x] Creation of initial generation
+- [x] Running multiple agents and games in parallel
 - [x] Fitness function (score, time)
+- [x] Evaluation of agents (score, time, level)
 - [x] Crossover mechanism
 - [x] Mutation mechanism
 - [x] Creating new networks from previous generation
@@ -92,6 +90,3 @@ Management program is responsible for starting and handling multiple instances o
 - [ ] Add game menu screen
 - [ ] Sprites for player, asteroids and bullets
 - [ ] Add game sound effects
-
-### Optionals 2.1
-- [ ] Montage of training generations (optional)
