@@ -106,10 +106,10 @@ int32_t mInstancer_killIndividual(uint32_t instanceID);
 
 /**
  * @brief Toggle headless mode for given instance
- * 
+ *
  * @param instanceID Instance ID to toggle headless mode
  * @return 0 on success, 1 on failure
- * 
+ *
  * @note Headless mode can be toggled only on running instances
  */
 int32_t mInstancer_toggleHeadless(uint32_t instanceID);
@@ -149,9 +149,16 @@ void mInstancer_setMaxIterations(uint32_t value);
 
 /**
  * @brief Set number of iterations before reseeding game environment for training
- * 
+ *
  * @param value Number of iterations (if 0, reseeding is disabled)
  */
 void mInstancer_setEpochSize(uint32_t value);
+
+/**
+ * @brief Set number of elite individuals to keep in the next generation
+ *
+ * @param value Number of elite individuals (maximally population size - 1)
+ */
+void mInstancer_setElitismCount(uint32_t value);
 
 #endif  // MANINSTANCE_H

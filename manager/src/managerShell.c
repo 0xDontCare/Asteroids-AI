@@ -502,7 +502,7 @@ int cmd_populationLoad(void)
 
 int cmd_generationStart(void)
 {
-    // ask user for max parallel instances, evolution iterations and epoch size
+    // ask user for max parallel instances, evolution iterations, epoch size and elitism count
     printf("\tMax parallel instances: ");
     xString *parallelCountStr = xString_readInSafe(6);
     if (parallelCountStr == NULL) {
@@ -539,6 +539,18 @@ int cmd_generationStart(void)
     mInstancer_setEpochSize((uint32_t)xString_toInt(epochSizeStr));
     xString_free(epochSizeStr);
 
+    printf("\tElitism count: ");
+    xString *elitismCountStr = xString_readInSafe(6);
+    if (elitismCountStr == NULL) {
+        return 1;
+    } else if (xString_isEmpty(elitismCountStr)) {
+        printf("\t[ERR]: Invalid elitism count\n");
+        xString_free(elitismCountStr);
+        return 0;
+    }
+    mInstancer_setElitismCount((uint32_t)xString_toInt(elitismCountStr));
+    xString_free(elitismCountStr);
+
     if (mInstancer_startPopulation() != 0) {
         printf("\t[ERR]: Failed to start generation\n");
         return 1;
@@ -547,7 +559,6 @@ int cmd_generationStart(void)
     return 0;
 }
 
-// TODO: fix segfaulting when called during next generation creation process
 int cmd_generationStatus(void)
 {
     // get loaded population descriptors
