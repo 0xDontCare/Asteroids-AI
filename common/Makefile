@@ -1,5 +1,4 @@
-CC = gcc
-CFLAGS = -Wall -Wextra -Wpedantic -Werror -Wshadow -Wstrict-overflow -fno-strict-aliasing -std=gnu11 -Iinclude -pthread -D_DEFAULT_SOURCE -g
+CFLAGS += -Iinclude
 
 SRC_DIR = src
 OBJ_DIR = obj

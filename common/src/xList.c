@@ -2,7 +2,8 @@
 
 #include <stdlib.h>
 
-xList *xList_new() {
+xList *xList_new(void)
+{
     xList *list = malloc(sizeof(xList));
     if (list == NULL) {
         return NULL;
@@ -13,7 +14,8 @@ xList *xList_new() {
     return list;
 }
 
-void xList_free(xList *list) {
+void xList_free(xList *list)
+{
     xListNode *node = list->head;
     while (node != NULL) {
         xListNode *next = node->next;
@@ -23,7 +25,8 @@ void xList_free(xList *list) {
     free(list);
 }
 
-void xList_pushFront(xList *list, void *data) {
+void xList_pushFront(xList *list, void *data)
+{
     if (list == NULL || data == NULL) {
         return;
     }
@@ -47,7 +50,8 @@ void xList_pushFront(xList *list, void *data) {
     list->size++;
 }
 
-void xList_pushBack(xList *list, void *data) {
+void xList_pushBack(xList *list, void *data)
+{
     if (list == NULL || data == NULL) {
         return;
     }
@@ -71,7 +75,8 @@ void xList_pushBack(xList *list, void *data) {
     list->size++;
 }
 
-void *xList_popFront(xList *list) {
+void *xList_popFront(xList *list)
+{
     if (list == NULL || list->head == NULL) {
         return NULL;
     }
@@ -91,7 +96,8 @@ void *xList_popFront(xList *list) {
     return data;
 }
 
-void *xList_popBack(xList *list) {
+void *xList_popBack(xList *list)
+{
     if (list == NULL || list->tail == NULL) {
         return NULL;
     }
@@ -111,21 +117,24 @@ void *xList_popBack(xList *list) {
     return data;
 }
 
-void *xList_front(xList *list) {
+void *xList_front(xList *list)
+{
     if (list == NULL || list->head == NULL) {
         return NULL;
     }
     return list->head->data;
 }
 
-void *xList_back(xList *list) {
+void *xList_back(xList *list)
+{
     if (list == NULL || list->tail == NULL) {
         return NULL;
     }
     return list->tail->data;
 }
 
-void xList_insert(xList *list, int index, void *data) {
+void xList_insert(xList *list, int index, void *data)
+{
     if (list == NULL || data == NULL || index < 0 || index > list->size) {
         return;
     }
@@ -177,7 +186,8 @@ void xList_insert(xList *list, int index, void *data) {
     list->size++;
 }
 
-void *xList_get(xList *list, int index) {
+void *xList_get(xList *list, int index)
+{
     if (list == NULL || index < 0 || index >= list->size) {
         return NULL;
     }
@@ -197,7 +207,8 @@ void *xList_get(xList *list, int index) {
     }
 }
 
-void *xList_remove(xList *list, int index) {
+void *xList_remove(xList *list, int index)
+{
     if (list == NULL || index < 0 || index >= list->size) {
         return NULL;
     }
@@ -239,7 +250,8 @@ void *xList_remove(xList *list, int index) {
     }
 }
 
-void xList_clear(xList *list) {
+void xList_clear(xList *list)
+{
     if (list == NULL) {
         return;
     }
@@ -256,7 +268,8 @@ void xList_clear(xList *list) {
     list->size = 0;
 }
 
-static void xList_qsort(xListNode *head, xListNode *tail, int (*comparator)(const void *, const void *)) {
+static void xList_qsort(xListNode *head, xListNode *tail, int (*comparator)(const void *, const void *))
+{
     if (head == NULL || tail == NULL || comparator == NULL) {
         return;
     }
@@ -285,7 +298,8 @@ static void xList_qsort(xListNode *head, xListNode *tail, int (*comparator)(cons
     xList_qsort(pivot->next, tail, comparator);
 }
 
-void xList_sort(xList *list, int (*comparator)(const void *, const void *)) {
+void xList_sort(xList *list, int (*comparator)(const void *, const void *))
+{
     if (list == NULL || comparator == NULL) {
         return;
     }
@@ -309,7 +323,8 @@ void xList_sort(xList *list, int (*comparator)(const void *, const void *)) {
     list->head = node;
 }
 
-void xList_reverse(xList *list) {
+void xList_reverse(xList *list)
+{
     if (list == NULL) {
         return;
     }
@@ -327,7 +342,8 @@ void xList_reverse(xList *list) {
     list->tail = temp;
 }
 
-xList *xList_map(xList *list, void *(*func)(void *)) {
+xList *xList_map(xList *list, void *(*func)(void *))
+{
     if (list == NULL || func == NULL) {
         return NULL;
     }
@@ -348,7 +364,8 @@ xList *xList_map(xList *list, void *(*func)(void *)) {
     return newList;
 }
 
-xList *xList_filter(xList *list, int (*func)(void *)) {
+xList *xList_filter(xList *list, int (*func)(void *))
+{
     if (list == NULL || func == NULL) {
         return NULL;
     }
@@ -369,7 +386,8 @@ xList *xList_filter(xList *list, int (*func)(void *)) {
     return newList;
 }
 
-void *xList_reduce(xList *list, void *(*func)(void *, void *)) {
+void *xList_reduce(xList *list, void *(*func)(void *, void *))
+{
     if (list == NULL || func == NULL) {
         return NULL;
     }
@@ -388,7 +406,8 @@ void *xList_reduce(xList *list, void *(*func)(void *, void *)) {
     return result;
 }
 
-void xList_forEach(xList *list, void (*func)(void *)) {
+void xList_forEach(xList *list, void (*func)(void *))
+{
     if (list == NULL || func == NULL) {
         return;
     }
@@ -400,7 +419,8 @@ void xList_forEach(xList *list, void (*func)(void *)) {
     }
 }
 
-void xList_forEachArg(xList *list, void (*func)(void *, void **), void **arg) {
+void xList_forEachArg(xList *list, void (*func)(void *, void **), void **arg)
+{
     if (list == NULL || func == NULL || arg == NULL) {
         return;
     }
@@ -416,7 +436,8 @@ void xList_forEachArg(xList *list, void (*func)(void *, void **), void **arg) {
     }
 }
 
-xList *xList_concat(xList *list1, xList *list2) {
+xList *xList_concat(xList *list1, xList *list2)
+{
     if (list1 == NULL || list2 == NULL) {
         return NULL;
     }
@@ -441,7 +462,8 @@ xList *xList_concat(xList *list1, xList *list2) {
     return newList;
 }
 
-xList *xList_slice(xList *list, int start, int end) {
+xList *xList_slice(xList *list, int start, int end)
+{
     if (list == NULL || start < 0 || end > list->size || start > end) {
         return NULL;
     }
@@ -474,7 +496,8 @@ xList *xList_slice(xList *list, int start, int end) {
     return newList;
 }
 
-xList *xList_copy(xList *list) {
+xList *xList_copy(xList *list)
+{
     if (list == NULL) {
         return NULL;
     }
@@ -493,7 +516,8 @@ xList *xList_copy(xList *list) {
     return newList;
 }
 
-void xList_swap(xList *list, int index1, int index2) {
+void xList_swap(xList *list, int index1, int index2)
+{
     if (list == NULL || index1 < 0 || index1 >= list->size || index2 < 0 || index2 >= list->size || index1 == index2) {
         return;
     }
@@ -530,11 +554,12 @@ void xList_swap(xList *list, int index1, int index2) {
     node2->data = temp;
 }
 
-unsigned long long xList_hash(xList *list, unsigned long long (*hash)(void *)) {
-    unsigned long long rolling_hash = 0;    // rolling hash initial value
-    xListNode *node = list->head;           // list iterator
+unsigned long long xList_hash(xList *list, unsigned long long (*hash)(void *))
+{
+    unsigned long long rolling_hash = 0;  // rolling hash initial value
+    xListNode *node = list->head;         // list iterator
 
-    while(node != NULL) {
+    while (node != NULL) {
         unsigned long long node_hash = hash(node->data);
         rolling_hash = rolling_hash * 31 + node_hash;
         node = node->next;

@@ -33,6 +33,8 @@ enum cmdFlag_e {
     CMD_FLAG_HEADLESS = 0x08,
     CMD_FLAG_USE_NEURAL = 0x10,
     CMD_FLAG_MANAGED = 0x20,
+    CMD_FLAG_NEURAL_RANDOM = 0x40,
+    CMD_FLAG_NEURAL_FILE = 0x80
 };
 
 /* Control input flags
@@ -89,7 +91,7 @@ typedef struct bullet_s {
     int lifeSpawn;     // lifespan in frames
     bool active;       // is active (not destroyed/dead)
     Color color;       // render color
-} Shoot;
+} Bullet;
 
 // asteroid game object descriptor
 typedef struct asteroid_s {
@@ -99,24 +101,22 @@ typedef struct asteroid_s {
     float radius;      // collision radius
     bool active;       // is active (not destroyed)
     Color color;       // render color
-} Meteor;
+} Asteroid;
 
 // game constant definitions
 #define PLAYER_BASE_SIZE 20.0f           // player base size in pixels
 #define PLAYER_MAX_BULLETS 10            // maximum number of bullets on screen
 #define PLAYER_BASE_ACCELERATION 500.0f  // acceleration in pixels per second^2
+#define PLAYER_MAX_SPEED 500.f           // player maximum speed in pixels per second
 #define PLAYER_BASE_ROTATION 5.f         // rotation speed in radians
 
 #define ASTEROID_SPEED 100                // asteroid base speed in pixels per second
 #define ASTEROID_BASE_GENERATION_COUNT 4  // number of asteroids generated at game start
 
-#define BULLET_LIFETIME 80   // bullet lifespan in frames
-#define BULLET_SPEED 500.0f  // bullet speed in pixels per second
+#define BULLET_LIFETIME 60   // bullet lifespan in frames
+#define BULLET_SPEED 750.0f  // bullet speed in pixels per second
 #define FIRE_COOLDOWN 0.15f  // time between shots in seconds
 
 // ------------------------------------------------------------------
-// game function declarations
-Player* playerInit(void);
-void playerFree(Player* player);
 
 #endif  // MAIN_H

@@ -2,7 +2,8 @@
 
 #include <stdlib.h>
 
-xString *xString_new() {
+xString *xString_new(void)
+{
     xString *str = NULL;
     if ((str = malloc(sizeof(xString)))) {
         str->data = NULL;
@@ -12,7 +13,8 @@ xString *xString_new() {
     return str;
 }
 
-void xString_free(xString *str) {
+void xString_free(xString *str)
+{
     if (str) {
         if (str->data) {
             free(str->data);
@@ -21,7 +23,8 @@ void xString_free(xString *str) {
     }
 }
 
-void xString_optimize(xString *str) {
+void xString_optimize(xString *str)
+{
     if (str) {
         if (str->len < str->cap) {
             unsigned char *newData = NULL;
@@ -38,7 +41,36 @@ void xString_optimize(xString *str) {
     }
 }
 
-static int xString_CStringLen(char *cstr) {
+void xString_preallocate(xString *str, int len)
+{
+    if (str && len > 0) {
+        unsigned char *newData = NULL;
+        if ((newData = malloc(len))) {
+            free(str->data);
+            str->data = newData;
+            str->len = 0;
+            str->cap = len;
+        }
+    }
+}
+
+/**
+ * @brief Get length of C-style string.
+ *
+ * @param cstr Pointer to C-style string.
+ * @return int Length of C-style string.
+ *
+ * @note If cstr is NULL, the function returns 0.
+ *
+ * @note The function returns the length of the string, not including the null
+ * terminator.
+ *
+ * @warning It is important that the string is null-terminated, otherwise the
+ * function will continue reading memory until it finds a null terminator or the
+ * program crashes.
+ */
+static int xString_CStringLen(const char *cstr)
+{
     int len = 0;
     if (cstr) {
         while (cstr[len] != '\0') {
@@ -48,7 +80,8 @@ static int xString_CStringLen(char *cstr) {
     return len;
 }
 
-void xString_append(xString *str, unsigned char *data, int len) {
+void xString_append(xString *str, unsigned char *data, int len)
+{
     if (str && data && len > 0) {
         if (str->len + len > str->cap) {
             int newCap = str->cap * 2;
@@ -76,25 +109,29 @@ void xString_append(xString *str, unsigned char *data, int len) {
     }
 }
 
-void xString_appendChar(xString *str, unsigned char c) {
+void xString_appendChar(xString *str, unsigned char c)
+{
     if (str) {
         xString_append(str, &c, 1);
     }
 }
 
-void xString_appendString(xString *str, xString *str2) {
+void xString_appendString(xString *str, xString *str2)
+{
     if (str && str2) {
         xString_append(str, str2->data, str2->len);
     }
 }
 
-void xString_appendCString(xString *str, char *cstr) {
+void xString_appendCString(xString *str, const char *cstr)
+{
     if (str && cstr) {
         xString_append(str, (unsigned char *)cstr, xString_CStringLen(cstr));
     }
 }
 
-xString *xString_copy(xString *str) {
+xString *xString_copy(const xString *str)
+{
     xString *str2 = NULL;
     if (str) {
         if ((str2 = xString_new())) {
@@ -104,7 +141,8 @@ xString *xString_copy(xString *str) {
     return str2;
 }
 
-xString *xString_substring(xString *str, int start, int end) {
+xString *xString_substring(const xString *str, int start, int end)
+{
     xString *str2 = NULL;
     if ((str2 = xString_new())) {
         if (str && start >= 0 && end >= 0 && start <= end && end <= str->len) {
@@ -114,7 +152,21 @@ xString *xString_substring(xString *str, int start, int end) {
     return str2;
 }
 
-static int *xString_buildLPS(unsigned char *data, int len) {
+/**
+ * @brief Create longest prefix suffix array for use in the Knuth-Morris-Pratt
+ * algorithm.
+ *
+ * @param data Pointer to data block.
+ * @param len Length of data block.
+ * @return int* Pointer to allocated longest prefix suffix array, or NULL if
+ * allocation failed.
+ *
+ * @note The longest prefix suffix array is used in the Knuth-Morris-Pratt
+ * algorithm to avoid unnecessary comparisons.
+ *
+ */
+static int *xString_buildLPS(unsigned char *data, int len)
+{
     int *lps = NULL;
     if (data && len > 0) {
         if ((lps = malloc(len * sizeof(int)))) {
@@ -168,7 +220,8 @@ static int xString_hashData(unsigned char *data, int len, int startIndex) {
     return hashValue;
 }
 
-static int xString_rehashData(int hashValue, unsigned char oldByte, unsigned char newByte, int dataLen) {
+static int xString_rehashData(int hashValue, unsigned char oldByte, unsigned
+char newByte, int dataLen) {
     // update hash value for use in the Rabin-Karp algorithm
 
     if (dataLen <= 0) {
@@ -181,16 +234,16 @@ static int xString_rehashData(int hashValue, unsigned char oldByte, unsigned cha
         maxOrder = (maxOrder * 256) % 10007;
     }
 
-    int newHash = (256 * (hashValue - (int)oldByte * maxOrder) + (int)(newByte)) % 10007;
-    if (newHash < 0) {
-        newHash += 10007;
+    int newHash = (256 * (hashValue - (int)oldByte * maxOrder) + (int)(newByte))
+% 10007; if (newHash < 0) { newHash += 10007;
     }
 
     return newHash;
 }
 */
 
-int xString_find(xString *str, unsigned char *data, int len) {
+int xString_find(xString *str, unsigned char *data, int len)
+{
     // search using the Knuth-Morris-Pratt algorithm
 
     int index = -1;
@@ -221,7 +274,8 @@ int xString_find(xString *str, unsigned char *data, int len) {
     return index;
 }
 
-int xString_findChar(xString *str, unsigned char c) {
+int xString_findChar(xString *str, unsigned char c)
+{
     int index = -1;
     if (str) {
         int i;
@@ -235,16 +289,14 @@ int xString_findChar(xString *str, unsigned char c) {
     return index;
 }
 
-int xString_findString(xString *str, xString *str2) {
-    return xString_find(str, str2->data, str2->len);
-}
+int xString_findString(xString *str, xString *str2) { return xString_find(str, str2->data, str2->len); }
 
-int xString_findCString(xString *str, char *cstr) {
-    return xString_find(str, (unsigned char *)cstr, xString_CStringLen(cstr));
-}
+int xString_findCString(xString *str, char *cstr) { return xString_find(str, (unsigned char *)cstr, xString_CStringLen(cstr)); }
 
-int xString_findLast(xString *str, unsigned char *data, int len) {
-    // find last occurrence of substring in string using the Knuth-Morris-Pratt algorithm
+int xString_findLast(xString *str, unsigned char *data, int len)
+{
+    // find last occurrence of substring in string using the Knuth-Morris-Pratt
+    // algorithm
 
     int index = -1;
     int *lps = NULL;
@@ -271,13 +323,16 @@ int xString_findLast(xString *str, unsigned char *data, int len) {
                     }
                 }
             }
+
+            free(lps);
         }
     }
 
     return index;
 }
 
-int xString_findLastChar(xString *str, unsigned char c) {
+int xString_findLastChar(xString *str, unsigned char c)
+{
     int index = -1;
 
     if (str) {
@@ -292,15 +347,15 @@ int xString_findLastChar(xString *str, unsigned char c) {
     return index;
 }
 
-int xString_findLastString(xString *str, xString *str2) {
-    return xString_findLast(str, str2->data, str2->len);
-}
+int xString_findLastString(xString *str, xString *str2) { return xString_findLast(str, str2->data, str2->len); }
 
-int xString_findLastCString(xString *str, char *cstr) {
+int xString_findLastCString(xString *str, char *cstr)
+{
     return xString_findLast(str, (unsigned char *)cstr, xString_CStringLen(cstr));
 }
 
-int *xString_findAll(xString *str, unsigned char *data, int len) {
+int *xString_findAll(const xString *str, unsigned char *data, int len)
+{
     int *indices = NULL;
     if (str && data && len > 0 && str->len >= len) {
         int *lps = xString_buildLPS(data, len);
@@ -364,7 +419,8 @@ int *xString_findAll(xString *str, unsigned char *data, int len) {
     return indices;
 }
 
-int *xString_findAllChar(xString *str, unsigned char c) {
+int *xString_findAllChar(xString *str, unsigned char c)
+{
     int *indices = NULL;
     if (str && str->len > 0) {
         int count = 0;
@@ -391,15 +447,15 @@ int *xString_findAllChar(xString *str, unsigned char c) {
     return indices;
 }
 
-int *xString_findAllString(xString *str, xString *str2) {
-    return xString_findAll(str, str2->data, str2->len);
-}
+int *xString_findAllString(xString *str, xString *str2) { return xString_findAll(str, str2->data, str2->len); }
 
-int *xString_findAllCString(xString *str, char *cstr) {
+int *xString_findAllCString(xString *str, char *cstr)
+{
     return xString_findAll(str, (unsigned char *)cstr, xString_CStringLen(cstr));
 }
 
-int *xString_findAll_overlapping(xString *str, unsigned char *data, int len) {
+int *xString_findAll_overlapping(xString *str, unsigned char *data, int len)
+{
     int *indices = NULL;
     if (str && data && len > 0 && str->len >= len) {
         int *lps = xString_buildLPS(data, len);
@@ -457,15 +513,18 @@ int *xString_findAll_overlapping(xString *str, unsigned char *data, int len) {
     return indices;
 }
 
-int *xString_findAllString_overlapping(xString *str, xString *str2) {
+int *xString_findAllString_overlapping(xString *str, xString *str2)
+{
     return xString_findAll_overlapping(str, str2->data, str2->len);
 }
 
-int *xString_findAllCString_overlapping(xString *str, char *cstr) {
+int *xString_findAllCString_overlapping(xString *str, char *cstr)
+{
     return xString_findAll_overlapping(str, (unsigned char *)cstr, xString_CStringLen(cstr));
 }
 
-int xString_count(xString *str, unsigned char *data, int len) {
+int xString_count(xString *str, unsigned char *data, int len)
+{
     int count = 0;
     if (str && data && len > 0 && str->len >= len) {
         int *lps = xString_buildLPS(data, len);
@@ -497,7 +556,8 @@ int xString_count(xString *str, unsigned char *data, int len) {
     return count;
 }
 
-int xString_countChar(xString *str, unsigned char c) {
+int xString_countChar(xString *str, unsigned char c)
+{
     // count occurrences of character in string using linear pass through string
 
     int count = 0;
@@ -513,16 +573,14 @@ int xString_countChar(xString *str, unsigned char c) {
     return count;
 }
 
-int xString_countString(xString *str, xString *str2) {
-    return xString_count(str, str2->data, str2->len);
-}
+int xString_countString(xString *str, xString *str2) { return xString_count(str, str2->data, str2->len); }
 
-int xString_countCString(xString *str, char *cstr) {
-    return xString_count(str, (unsigned char *)cstr, xString_CStringLen(cstr));
-}
+int xString_countCString(xString *str, char *cstr) { return xString_count(str, (unsigned char *)cstr, xString_CStringLen(cstr)); }
 
-int xString_count_overlapping(xString *str, unsigned char *data, int len) {
-    // count occurrences of substring in string using Knuth-Morris-Pratt algorithm (overlapping matches included)
+int xString_count_overlapping(xString *str, unsigned char *data, int len)
+{
+    // count occurrences of substring in string using Knuth-Morris-Pratt
+    // algorithm (overlapping matches included)
 
     int count = 0;
     if (str && data && len > 0 && str->len >= len) {
@@ -552,15 +610,15 @@ int xString_count_overlapping(xString *str, unsigned char *data, int len) {
     return count;
 }
 
-int xString_countString_overlapping(xString *str, xString *str2) {
-    return xString_count_overlapping(str, str2->data, str2->len);
-}
+int xString_countString_overlapping(xString *str, xString *str2) { return xString_count_overlapping(str, str2->data, str2->len); }
 
-int xString_countCString_overlapping(xString *str, char *cstr) {
+int xString_countCString_overlapping(xString *str, char *cstr)
+{
     return xString_count_overlapping(str, (unsigned char *)cstr, xString_CStringLen(cstr));
 }
 
-void xString_replaceFirst(xString *str, unsigned char *data, int len, unsigned char *data2, int len2) {
+void xString_replaceFirst(xString *str, unsigned char *data, int len, unsigned char *data2, int len2)
+{
     // replace first occurrence of substring
 
     if (str && data && data2 && len > 0 && len2 >= 0) {
@@ -611,7 +669,8 @@ void xString_replaceFirst(xString *str, unsigned char *data, int len, unsigned c
     }
 }
 
-void xString_replaceFirstChar(xString *str, unsigned char c, unsigned char c2) {
+void xString_replaceFirstChar(xString *str, unsigned char c, unsigned char c2)
+{
     for (int i = 0; i < str->len; i++) {
         if (str->data[i] == c) {
             str->data[i] = c2;
@@ -620,15 +679,18 @@ void xString_replaceFirstChar(xString *str, unsigned char c, unsigned char c2) {
     }
 }
 
-void xString_replaceFirstString(xString *str, xString *str2, xString *str3) {
+void xString_replaceFirstString(xString *str, xString *str2, xString *str3)
+{
     xString_replaceFirst(str, str2->data, str2->len, str3->data, str3->len);
 }
 
-void xString_replaceFirstCString(xString *str, char *cstr, char *cstr2) {
+void xString_replaceFirstCString(xString *str, char *cstr, char *cstr2)
+{
     xString_replaceFirst(str, (unsigned char *)cstr, xString_CStringLen(cstr), (unsigned char *)cstr2, xString_CStringLen(cstr2));
 }
 
-void xString_replaceLast(xString *str, unsigned char *data, int len, unsigned char *data2, int len2) {
+void xString_replaceLast(xString *str, unsigned char *data, int len, unsigned char *data2, int len2)
+{
     if (str && data && data2 && len > 0 && len2 >= 0) {
         int index = xString_findLast(str, data, len);
         if (index >= 0) {
@@ -677,7 +739,8 @@ void xString_replaceLast(xString *str, unsigned char *data, int len, unsigned ch
     }
 }
 
-void xString_replaceLastChar(xString *str, unsigned char c, unsigned char c2) {
+void xString_replaceLastChar(xString *str, unsigned char c, unsigned char c2)
+{
     for (int i = str->len - 1; i >= 0; i--) {
         if (str->data[i] == c) {
             str->data[i] = c2;
@@ -686,15 +749,18 @@ void xString_replaceLastChar(xString *str, unsigned char c, unsigned char c2) {
     }
 }
 
-void xString_replaceLastString(xString *str, xString *str2, xString *str3) {
+void xString_replaceLastString(xString *str, xString *str2, xString *str3)
+{
     xString_replaceLast(str, str2->data, str2->len, str3->data, str3->len);
 }
 
-void xString_replaceLastCString(xString *str, char *cstr, char *cstr2) {
+void xString_replaceLastCString(xString *str, char *cstr, char *cstr2)
+{
     xString_replaceLast(str, (unsigned char *)cstr, xString_CStringLen(cstr), (unsigned char *)cstr2, xString_CStringLen(cstr2));
 }
 
-void xString_replace(xString *str, unsigned char *data, int len, unsigned char *data2, int len2) {
+void xString_replace(xString *str, unsigned char *data, int len, unsigned char *data2, int len2)
+{
     // replace all occurrences of substring in string (non-overlapping search)
 
     if (str && data && data2 && len > 0 && len2 >= 0) {
@@ -772,7 +838,8 @@ void xString_replace(xString *str, unsigned char *data, int len, unsigned char *
     }
 }
 
-void xString_replaceChar(xString *str, unsigned char c, unsigned char c2) {
+void xString_replaceChar(xString *str, unsigned char c, unsigned char c2)
+{
     if (str && str->data && str->len > 0) {
         for (int i = 0; i < str->len; i++) {
             if (str->data[i] == c) {
@@ -782,15 +849,18 @@ void xString_replaceChar(xString *str, unsigned char c, unsigned char c2) {
     }
 }
 
-void xString_replaceString(xString *str, xString *str2, xString *str3) {
+void xString_replaceString(xString *str, xString *str2, xString *str3)
+{
     xString_replace(str, str2->data, str2->len, str3->data, str3->len);
 }
 
-void xString_replaceCString(xString *str, char *cstr, char *cstr2) {
+void xString_replaceCString(xString *str, char *cstr, char *cstr2)
+{
     xString_replace(str, (unsigned char *)cstr, xString_CStringLen(cstr), (unsigned char *)cstr2, xString_CStringLen(cstr2));
 }
 
-void xString_remove(xString *str, int start, int end) {
+void xString_remove(xString *str, int start, int end)
+{
     if (str && start >= 0 && end >= 0 && start <= end && end <= str->len) {
         int len = end - start;
         if (len > 0) {
@@ -802,7 +872,8 @@ void xString_remove(xString *str, int start, int end) {
     }
 }
 
-void xString_removeFirstBlock(xString *str, unsigned char *data, int len) {
+void xString_removeFirstBlock(xString *str, unsigned char *data, int len)
+{
     if (str && data && len > 0 && str->len >= len) {
         int index = xString_find(str, data, len);
         if (index >= 0) {
@@ -811,7 +882,8 @@ void xString_removeFirstBlock(xString *str, unsigned char *data, int len) {
     }
 }
 
-void xString_removeLastBlock(xString *str, unsigned char *data, int len) {
+void xString_removeLastBlock(xString *str, unsigned char *data, int len)
+{
     if (str && data && len > 0 && str->len >= len) {
         int index = xString_findLast(str, data, len);
         if (index >= 0) {
@@ -820,7 +892,8 @@ void xString_removeLastBlock(xString *str, unsigned char *data, int len) {
     }
 }
 
-void xString_removeAllBlock(xString *str, unsigned char *data, int len) {
+void xString_removeAllBlock(xString *str, unsigned char *data, int len)
+{
     if (str && data && len > 0 && str->len >= len) {
         int *indices = xString_findAll(str, data, len);
         if (indices) {
@@ -834,43 +907,35 @@ void xString_removeAllBlock(xString *str, unsigned char *data, int len) {
     }
 }
 
-void xString_removeFirstChar(xString *str, unsigned char c) {
-    xString_removeFirstBlock(str, &c, 1);
-}
+void xString_removeFirstChar(xString *str, unsigned char c) { xString_removeFirstBlock(str, &c, 1); }
 
-void xString_removeLastChar(xString *str, unsigned char c) {
-    xString_removeLastBlock(str, &c, 1);
-}
+void xString_removeLastChar(xString *str, unsigned char c) { xString_removeLastBlock(str, &c, 1); }
 
-void xString_removeAllChar(xString *str, unsigned char c) {
-    xString_removeAllBlock(str, &c, 1);
-}
+void xString_removeAllChar(xString *str, unsigned char c) { xString_removeAllBlock(str, &c, 1); }
 
-void xString_removeFirstString(xString *str, xString *str2) {
-    xString_removeFirstBlock(str, str2->data, str2->len);
-}
+void xString_removeFirstString(xString *str, xString *str2) { xString_removeFirstBlock(str, str2->data, str2->len); }
 
-void xString_removeLastString(xString *str, xString *str2) {
-    xString_removeLastBlock(str, str2->data, str2->len);
-}
+void xString_removeLastString(xString *str, xString *str2) { xString_removeLastBlock(str, str2->data, str2->len); }
 
-void xString_removeAllString(xString *str, xString *str2) {
-    xString_removeAllBlock(str, str2->data, str2->len);
-}
+void xString_removeAllString(xString *str, xString *str2) { xString_removeAllBlock(str, str2->data, str2->len); }
 
-void xString_removeFirstCString(xString *str, char *cstr) {
+void xString_removeFirstCString(xString *str, char *cstr)
+{
     xString_removeFirstBlock(str, (unsigned char *)cstr, xString_CStringLen(cstr));
 }
 
-void xString_removeLastCString(xString *str, char *cstr) {
+void xString_removeLastCString(xString *str, char *cstr)
+{
     xString_removeLastBlock(str, (unsigned char *)cstr, xString_CStringLen(cstr));
 }
 
-void xString_removeAllCString(xString *str, char *cstr) {
+void xString_removeAllCString(xString *str, char *cstr)
+{
     xString_removeAllBlock(str, (unsigned char *)cstr, xString_CStringLen(cstr));
 }
 
-void xString_removeAllWhitespace(xString *str) {
+void xString_removeAllWhitespace(xString *str)
+{
     if (str) {
         int i;
         for (i = 0; i < str->len; i++) {
@@ -882,7 +947,8 @@ void xString_removeAllWhitespace(xString *str) {
     }
 }
 
-void xString_removeAllDigits(xString *str) {
+void xString_removeAllDigits(xString *str)
+{
     if (str) {
         int i;
         for (i = 0; i < str->len; i++) {
@@ -894,7 +960,8 @@ void xString_removeAllDigits(xString *str) {
     }
 }
 
-void xString_removeAllLetters(xString *str) {
+void xString_removeAllLetters(xString *str)
+{
     if (str) {
         int i;
         for (i = 0; i < str->len; i++) {
@@ -906,7 +973,8 @@ void xString_removeAllLetters(xString *str) {
     }
 }
 
-void xString_removeAllUppercase(xString *str) {
+void xString_removeAllUppercase(xString *str)
+{
     if (str) {
         int i;
         for (i = 0; i < str->len; i++) {
@@ -918,7 +986,8 @@ void xString_removeAllUppercase(xString *str) {
     }
 }
 
-void xString_removeAllLowercase(xString *str) {
+void xString_removeAllLowercase(xString *str)
+{
     if (str) {
         int i;
         for (i = 0; i < str->len; i++) {
@@ -930,11 +999,13 @@ void xString_removeAllLowercase(xString *str) {
     }
 }
 
-void xString_removeAllSpecial(xString *str) {
+void xString_removeAllSpecial(xString *str)
+{
     if (str) {
         int i;
         for (i = 0; i < str->len; i++) {
-            if ((str->data[i] >= '!' && str->data[i] <= '/') || (str->data[i] >= ':' && str->data[i] <= '@') || (str->data[i] >= '[' && str->data[i] <= '`') || (str->data[i] >= '{' && str->data[i] <= '~')) {
+            if ((str->data[i] >= '!' && str->data[i] <= '/') || (str->data[i] >= ':' && str->data[i] <= '@') ||
+                (str->data[i] >= '[' && str->data[i] <= '`') || (str->data[i] >= '{' && str->data[i] <= '~')) {
                 xString_remove(str, i, i + 1);
                 i--;
             }
@@ -942,7 +1013,8 @@ void xString_removeAllSpecial(xString *str) {
     }
 }
 
-void xString_removeAllNewlines(xString *str) {
+void xString_removeAllNewlines(xString *str)
+{
     if (str) {
         int i;
         for (i = 0; i < str->len; i++) {
@@ -954,11 +1026,10 @@ void xString_removeAllNewlines(xString *str) {
     }
 }
 
-int xString_isEmpty(xString *str) {
-    return str ? str->len == 0 : 1;
-}
+int xString_isEmpty(const xString *str) { return str ? str->len == 0 : 1; }
 
-int xString_compare(xString *str, xString *str2) {
+int xString_compare(const xString *str, const xString *str2)
+{
     int result = 0;
     if (str && str2) {
         int i;
@@ -982,7 +1053,8 @@ int xString_compare(xString *str, xString *str2) {
     return result;
 }
 
-int xString_compareCString(xString *str, char *cstr) {
+int xString_compareCString(const xString *str, const char *cstr)
+{
     xString *str2 = xString_new();
     xString_appendCString(str2, cstr);
     int result = xString_compare(str, str2);
@@ -990,7 +1062,8 @@ int xString_compareCString(xString *str, char *cstr) {
     return result;
 }
 
-int xString_compareIgnoreCase(xString *str, xString *str2) {
+int xString_compareIgnoreCase(const xString *str, const xString *str2)
+{
     int result = 0;
     if (str && str2) {
         int i;
@@ -1032,7 +1105,8 @@ int xString_compareIgnoreCase(xString *str, xString *str2) {
     return result;
 }
 
-int xString_compareIgnoreCaseCString(xString *str, char *cstr) {
+int xString_compareIgnoreCaseCString(const xString *str, const char *cstr)
+{
     xString *str2 = xString_new();
     xString_appendCString(str2, cstr);
     int result = xString_compareIgnoreCase(str, str2);
@@ -1040,7 +1114,8 @@ int xString_compareIgnoreCaseCString(xString *str, char *cstr) {
     return result;
 }
 
-char *xString_toCString(xString *str) {
+char *xString_toCString(const xString *str)
+{
     char *cstr = NULL;
     if (str) {
         int cstr_len = 0;
@@ -1058,7 +1133,8 @@ char *xString_toCString(xString *str) {
     return cstr;
 }
 
-void xString_toLowercase(xString *str) {
+void xString_toLowercase(xString *str)
+{
     if (str) {
         int i;
         for (i = 0; i < str->len; i++) {
@@ -1069,7 +1145,8 @@ void xString_toLowercase(xString *str) {
     }
 }
 
-void xString_toUppercase(xString *str) {
+void xString_toUppercase(xString *str)
+{
     if (str) {
         int i;
         for (i = 0; i < str->len; i++) {
@@ -1080,7 +1157,8 @@ void xString_toUppercase(xString *str) {
     }
 }
 
-void xString_reverse(xString *str) {
+void xString_reverse(xString *str)
+{
     if (str) {
         int i;
         for (i = 0; i < str->len / 2; i++) {
@@ -1091,12 +1169,14 @@ void xString_reverse(xString *str) {
     }
 }
 
-void xString_trim(xString *str) {
+void xString_trim(xString *str)
+{
     xString_trimLeft(str);
     xString_trimRight(str);
 }
 
-void xString_trimLeft(xString *str) {
+void xString_trimLeft(xString *str)
+{
     if (str) {
         int i;
         for (i = 0; i < str->len; i++) {
@@ -1108,7 +1188,8 @@ void xString_trimLeft(xString *str) {
     }
 }
 
-void xString_trimRight(xString *str) {
+void xString_trimRight(xString *str)
+{
     if (str) {
         int i;
         for (i = str->len - 1; i >= 0; i--) {
@@ -1120,7 +1201,8 @@ void xString_trimRight(xString *str) {
     }
 }
 
-void xString_padLeft(xString *str, unsigned char c, int len) {
+void xString_padLeft(xString *str, unsigned char c, int len)
+{
     if (str && len > str->len) {
         int oldLen = str->len;
         int i;
@@ -1130,7 +1212,8 @@ void xString_padLeft(xString *str, unsigned char c, int len) {
     }
 }
 
-void xString_padRight(xString *str, unsigned char c, int len) {
+void xString_padRight(xString *str, unsigned char c, int len)
+{
     if (str && len > str->len) {
         int oldLen = str->len;
         int i;
@@ -1140,7 +1223,8 @@ void xString_padRight(xString *str, unsigned char c, int len) {
     }
 }
 
-void xString_padBoth(xString *str, unsigned char c, int len) {
+void xString_padBoth(xString *str, unsigned char c, int len)
+{
     if (str && len > str->len) {
         int oldLen = str->len;
         int i;
@@ -1154,7 +1238,8 @@ void xString_padBoth(xString *str, unsigned char c, int len) {
     }
 }
 
-void xString_insert(xString *str, unsigned char *data, int len, int index) {
+void xString_insert(xString *str, unsigned char *data, int len, int index)
+{
     if (str && index >= 0 && index <= str->len && data && len > 0) {
         int newLen = str->len + len;
         if (newLen > str->cap) {
@@ -1192,19 +1277,17 @@ void xString_insert(xString *str, unsigned char *data, int len, int index) {
     }
 }
 
-void xString_insertChar(xString *str, unsigned char c, int index) {
-    xString_insert(str, &c, 1, index);
-}
+void xString_insertChar(xString *str, unsigned char c, int index) { xString_insert(str, &c, 1, index); }
 
-void xString_insertString(xString *str, xString *str2, int index) {
-    xString_insert(str, str2->data, str2->len, index);
-}
+void xString_insertString(xString *str, xString *str2, int index) { xString_insert(str, str2->data, str2->len, index); }
 
-void xString_insertCString(xString *str, char *cstr, int index) {
+void xString_insertCString(xString *str, char *cstr, int index)
+{
     xString_insert(str, (unsigned char *)cstr, xString_CStringLen(cstr), index);
 }
 
-xString **xString_split(xString *str, unsigned char *data, int len) {
+xString **xString_split(const xString *str, unsigned char *data, int len)
+{
     xString **str2 = NULL;
     if (str && data && len > 0 && str->len >= len) {
         int *indices = xString_findAll(str, data, len);
@@ -1242,19 +1325,17 @@ xString **xString_split(xString *str, unsigned char *data, int len) {
     return str2;
 }
 
-xString **xString_splitChar(xString *str, unsigned char c) {
-    return xString_split(str, &c, 1);
-}
+xString **xString_splitChar(const xString *str, unsigned char c) { return xString_split(str, &c, 1); }
 
-xString **xString_splitString(xString *str, xString *str2) {
-    return xString_split(str, str2->data, str2->len);
-}
+xString **xString_splitString(const xString *str, xString *str2) { return xString_split(str, str2->data, str2->len); }
 
-xString **xString_splitCString(xString *str, char *cstr) {
+xString **xString_splitCString(const xString *str, char *cstr)
+{
     return xString_split(str, (unsigned char *)cstr, xString_CStringLen(cstr));
 }
 
-int xString_toInt(xString *str) {
+int xString_toInt(xString *str)
+{
     int result = 0;
     int sign = 1;
     if (str && str->len > 0) {
@@ -1275,7 +1356,8 @@ int xString_toInt(xString *str) {
     return result * sign;
 }
 
-float xString_toFloat(xString *str) {
+float xString_toFloat(xString *str)
+{
     float result = 0;
     int sign = 1;
     if (str && str->len > 0) {
@@ -1309,7 +1391,8 @@ float xString_toFloat(xString *str) {
     return result * sign;
 }
 
-double xString_toDouble(xString *str) {
+double xString_toDouble(xString *str)
+{
     double result = 0;
     int sign = 1;
     if (str && str->len > 0) {
@@ -1343,7 +1426,8 @@ double xString_toDouble(xString *str) {
     return result * sign;
 }
 
-long xString_toLong(xString *str) {
+long xString_toLong(xString *str)
+{
     long result = 0;
     int sign = 1;
     if (str && str->len > 0) {
@@ -1364,7 +1448,8 @@ long xString_toLong(xString *str) {
     return result * sign;
 }
 
-xString *xString_fromInt(int i) {
+xString *xString_fromInt(int i)
+{
     xString *str = NULL;
     if ((str = xString_new())) {
         if (i == 0) {
@@ -1387,7 +1472,8 @@ xString *xString_fromInt(int i) {
     return str;
 }
 
-xString *xString_fromFloat(float f) {
+xString *xString_fromFloat(float f)
+{
     xString *str = NULL;
     if ((str = xString_new())) {
         // determining sign of number
@@ -1409,7 +1495,8 @@ xString *xString_fromFloat(float f) {
             xString_appendChar(str, (unsigned char)'-');
         }
 
-        // reversing since all integer part has been read backwards and adding decimal point
+        // reversing since all integer part has been read backwards and adding
+        // decimal point
         xString_reverse(str);
         xString_appendChar(str, (unsigned char)'.');
 
@@ -1430,7 +1517,8 @@ xString *xString_fromFloat(float f) {
     return str;
 }
 
-xString *xString_fromDouble(double d) {
+xString *xString_fromDouble(double d)
+{
     xString *str = NULL;
     if ((str = xString_new())) {
         // determining sign of number
@@ -1452,7 +1540,8 @@ xString *xString_fromDouble(double d) {
             xString_appendChar(str, (unsigned char)'-');
         }
 
-        // reversing since all integer part has been read backwards and adding decimal point
+        // reversing since all integer part has been read backwards and adding
+        // decimal point
         xString_reverse(str);
         xString_appendChar(str, (unsigned char)'.');
 
@@ -1473,7 +1562,8 @@ xString *xString_fromDouble(double d) {
     return str;
 }
 
-xString *xString_fromLong(long l) {
+xString *xString_fromLong(long l)
+{
     xString *str = NULL;
     if ((str = xString_new())) {
         if (l == 0) {
@@ -1496,7 +1586,8 @@ xString *xString_fromLong(long l) {
     return str;
 }
 
-xString *xString_fromCString(char *cstr) {
+xString *xString_fromCString(const char *cstr)
+{
     xString *str = NULL;
     if ((str = xString_new())) {
         xString_appendCString(str, cstr);
@@ -1504,7 +1595,8 @@ xString *xString_fromCString(char *cstr) {
     return str;
 }
 
-int xString_isEqual(xString *str, unsigned char *data, int len) {
+int xString_isEqual(xString *str, unsigned char *data, int len)
+{
     int result = 0;
     if (str && data && len > 0 && str->len == len) {
         int i;
@@ -1520,15 +1612,15 @@ int xString_isEqual(xString *str, unsigned char *data, int len) {
     return result;
 }
 
-int xString_isEqualString(xString *str, xString *str2) {
-    return xString_isEqual(str, str2->data, str2->len);
-}
+int xString_isEqualString(xString *str, xString *str2) { return xString_isEqual(str, str2->data, str2->len); }
 
-int xString_isEqualCString(xString *str, char *cstr) {
+int xString_isEqualCString(xString *str, char *cstr)
+{
     return xString_isEqual(str, (unsigned char *)cstr, xString_CStringLen(cstr));
 }
 
-unsigned long long xString_hash(xString *str) {
+unsigned long long xString_hash(xString *str)
+{
     unsigned long long hash = 0xcbf29ce484222325;  // FNV offset basis
     if (str && str->data && str->len > 0) {
         for (int i = 0; i < str->len; i++) {

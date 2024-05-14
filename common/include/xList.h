@@ -53,7 +53,7 @@ typedef struct xList {
  * @note
  * If function fails to allocate memory, it will return NULL.
  */
-xList *xList_new();
+xList *xList_new(void);
 
 /**
  * @brief
