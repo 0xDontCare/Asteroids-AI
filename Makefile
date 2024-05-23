@@ -1,8 +1,9 @@
 # compiler and linker flags
 CC = clang
 CFLAGS = -Wall -Wextra -Wpedantic -Werror -Wshadow -Wstrict-overflow -fno-strict-aliasing -std=gnu11 -pthread -D_DEFAULT_SOURCE
-LDFLAGS = -lraylib -lm -lpthread -lrt -lX11 -lGL -lm -lpthread -ldl
+LDFLAGS = -lraylib -lm -lpthread -lrt -lX11 -lGL -lm -ldl
 
+# determining which build to use (release, debug or sanitizer)
 SANITIZER ?= 0
 DEBUG ?= 0
 ifeq ($(SANITIZER), 1)
@@ -42,48 +43,30 @@ BIN_DIR = bin
 
 .PHONY: all common game manager neurons clean
 
-all: game manager neurons
-
-# test target which prints out all above defined variables
-test_vars: | $(BIN_DIR)
-	@echo COMMON_DIR: $(COMMON_DIR)
-	@echo COMMON_SRC: $(COMMON_SRC)
-	@echo COMMON_OBJS: $(COMMON_OBJS)
-	@echo GAME_DIR: $(GAME_DIR)
-	@echo GAME_SRC: $(GAME_SRC)
-	@echo GAME_OBJS: $(GAME_OBJS)
-	@echo MANAGER_DIR: $(MANAGER_DIR)
-	@echo MANAGER_SRC: $(MANAGER_SRC)
-	@echo MANAGER_OBJS: $(MANAGER_OBJS)
-	@echo NEURONS_DIR: $(NEURONS_DIR)
-	@echo NEURONS_SRC: $(NEURONS_SRC)
-	@echo NEURONS_OBJS: $(NEURONS_OBJS)
-	@echo BIN_DIR: $(BIN_DIR)
+all: common game manager neurons
 
 common: $(COMMON_OBJS)
 
-game: $(COMMON_OBJS) $(GAME_OBJS) | $(BIN_DIR)
+game: $(GAME_OBJS) $(COMMON_OBJS) | $(BIN_DIR)
 	$(CC) -o $(BIN_DIR)/game $(COMMON_OBJS) $(GAME_OBJS) $(LDFLAGS)
 
-manager: $(COMMON_OBJS) $(MANAGER_OBJS) | $(BIN_DIR)
+manager: $(MANAGER_OBJS) $(COMMON_OBJS) | $(BIN_DIR)
 	$(CC) -o $(BIN_DIR)/manager $(COMMON_OBJS) $(MANAGER_OBJS) $(LDFLAGS)
 
-neurons: $(COMMON_OBJS) $(NEURONS_OBJS) | $(BIN_DIR)
+neurons: $(NEURONS_OBJS) $(COMMON_OBJS) | $(BIN_DIR)
 	$(CC) -o $(BIN_DIR)/neurons $(COMMON_OBJS) $(NEURONS_OBJS) $(LDFLAGS)
 
-#$(GAME_OBJS) $(MANAGER_OBJS) $(NEURONS_OBJS): | $(COMMON_OBJS)
-
 $(COMMON_DIR)/obj/%.o:
-	$(MAKE) -C common build
+	$(MAKE) -C common $(patsubst $(COMMON_DIR)/obj/%.o,obj/%.o,$@)
 
 $(GAME_DIR)/obj/%.o:
-	$(MAKE) -C game build
+	$(MAKE) -C game $(patsubst $(GAME_DIR)/obj/%.o,obj/%.o,$@)
 
 $(MANAGER_DIR)/obj/%.o:
-	$(MAKE) -C manager build
+	$(MAKE) -C manager $(patsubst $(MANAGER_DIR)/obj/%.o,obj/%.o,$@)
 
 $(NEURONS_DIR)/obj/%.o:
-	$(MAKE) -C neurons build
+	$(MAKE) -C neurons $(patsubst $(NEURONS_DIR)/obj/%.o,obj/%.o,$@)
 
 $(BIN_DIR):
 	mkdir -p $(BIN_DIR)
@@ -108,4 +91,3 @@ help:
 	@echo "  clean    Remove all generated files"
 	@echo "  help     Show this help message"
 
-#vpath %.o $(COMMON_DIR) $(GAME_DIR) $(MANAGER_DIR) $(NEURONS_DIR)
