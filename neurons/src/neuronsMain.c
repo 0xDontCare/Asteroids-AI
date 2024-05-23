@@ -1,18 +1,15 @@
-#include "neuronsMain.h"  // neural network program related enums, structs, etc.
-
-#include <math.h>     // math functions
-#include <signal.h>   // signal handling (will be used for graceful exit)
-#include <stdbool.h>  // boolean type
-#include <stdio.h>    // console input/output
-#include <stdlib.h>   // malloc, free, etc.
-#include <time.h>     // time functions (for random number generation)
-
-#include "commonUtility.h"  // common utility functions
-#include "fnnLoader.h"      // feedforward neural network loader (.fnnm file format)
-#include "sharedMemory.h"   // shared memory
-#include "xLinear.h"        // matrix operations
-#include "xList.h"          // list structure and operations
-#include "xString.h"        // string operations (for parsing command line arguments)
+#include "neuronsMain.h"
+#include <math.h>          // math functions
+#include <signal.h>        // signal handling (will be used for graceful exit)
+#include <stdbool.h>       // boolean type
+#include <stdio.h>         // console input/output
+#include <stdlib.h>        // malloc, free, etc.
+#include <time.h>          // time functions (for random number generation)
+#include "fnnLoader.h"     // feedforward neural network loader (.fnnm file format)
+#include "sharedMemory.h"  // shared memory
+#include "xLinear.h"       // matrix operations
+#include "xList.h"         // list structure and operations
+#include "xString.h"       // string operations (for parsing command line arguments)
 
 // ----------------------------------------------------------------------------------------------
 // global variables

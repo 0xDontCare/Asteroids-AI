@@ -1,19 +1,17 @@
-#include "managerInstance.h"  // instance manager module
-
-#include <dirent.h>     // directory operations
-#include <pthread.h>    // POSIX threads (worker threads)
-#include <stdint.h>     // standard integer types
-#include <stdio.h>      // standard input/output
-#include <sys/stat.h>   // data returned by the stat() function
-#include <sys/types.h>  // unix data types
-#include <sys/wait.h>   // waitpid function
-#include <time.h>       // time types
-#include <unistd.h>     // standard symbolic constants and types
-
+#include <dirent.h>           // directory operations
+#include <pthread.h>          // POSIX threads (worker threads)
+#include <stdint.h>           // standard integer types
+#include <stdio.h>            // standard input/output
+#include <stdlib.h>           // standard library
+#include <sys/stat.h>         // data returned by the stat() function
+#include <sys/types.h>        // unix data types
+#include <sys/wait.h>         // waitpid function
+#include <time.h>             // time types
+#include <unistd.h>           // standard symbolic constants and types
 #include "commonUtility.h"    // common utility functions
 #include "fnnGenAlgorithm.h"  // genetic algorithm functions for feedforward neural network (FNN) weights and biases
 #include "fnnSerializer.h"    // neural network model reading and writing
-#include "sharedMemory.h"     // shared memory functions
+#include "managerInstance.h"  // instance manager module
 #include "xArray.h"           // dynamic array and its functions
 #include "xDictionary.h"      // treemap and its functions
 #include "xString.h"          // string functions

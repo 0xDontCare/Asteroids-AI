@@ -1,6 +1,5 @@
 #include "xDictionary.h"
-
-#include <stdlib.h>
+#include <stdlib.h>  // standard library (for malloc, free, realloc)
 
 xDictionary *xDictionary_new(void)
 {

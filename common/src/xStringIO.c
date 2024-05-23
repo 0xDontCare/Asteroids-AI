@@ -1,9 +1,7 @@
-#include "xStringIO.h"  // base header
-
-#include <stdio.h>   // file and stream I/O
-#include <stdlib.h>  // dynamic memory management
-
-#include "xString.h"  // base xString module
+#include "xStringIO.h"
+#include <stdio.h>    // standard I/O functions
+#include <stdlib.h>   // standard library (for malloc, free, ...)
+#include "xString.h"  // base xString library
 
 xString *xString_readStream(FILE *stream)
 {

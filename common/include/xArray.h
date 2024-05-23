@@ -17,8 +17,6 @@
 extern "C" {
 #endif
 
-#include <stdlib.h>
-
 /**
  * @brief
  * xArray object which contains data, size and capacity.

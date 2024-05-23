@@ -1,23 +1,20 @@
 #include "managerInstance.h"
-
-#include <dirent.h>
-#include <fcntl.h>
-#include <inttypes.h>
-#include <pthread.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <unistd.h>
-
+#include <dirent.h>           // directory entry structure and functions
+#include <fcntl.h>            // file control options
+#include <inttypes.h>         // standard integer types
+#include <pthread.h>          // POSIX threads
+#include <stdio.h>            // standard I/O
+#include <stdlib.h>           // standard library
+#include <sys/stat.h>         // file status
+#include <sys/types.h>        // data types
+#include <sys/wait.h>         // waitpid (for child process termination)
+#include <unistd.h>           // standard symbolic constants and types
 #include "commonUtility.h"    // common utility functions
 #include "fnnGenAlgorithm.h"  // feedforward neural network genetic algorithm functions
 #include "fnnSerializer.h"    // feedforward neural network model serialization functions
 #include "sharedMemory.h"     // shared memory functions
 #include "xArray.h"           // dynamic array structure and functions
 #include "xDictionary.h"      // dictionary structure and functions
-#include "xString.h"          // dynamic string structure and functions
 
 //------------------------------------------------------------------------------------
 // program globals

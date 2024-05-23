@@ -1,11 +1,9 @@
 #include "fnnGenAlgorithm.h"
-
-#include <math.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <time.h>
-
-#include "fnnSerializer.h"
+#include <math.h>           // mathematical functions (for pow, log, sqrt)
+#include <stdint.h>         // standard integer types (for uint8_t, uint32_t, ...)
+#include <stdlib.h>         // standard library (for malloc, free, rand)
+#include <time.h>           // time functions (for getting time)
+#include "fnnSerializer.h"  // FNN model implementation and serialization functions
 
 /**
  * @brief Generate random number from normal distribution
@@ -153,7 +151,8 @@ FnnModel *fnn_modelBreed(FnnModel *parent1, FnnModel *parent2, float sbxCrossDis
 
     // crossover
     if (parent1->weightValues != NULL && parent2->weightValues != NULL) {
-        float *childWeights = fnn_crossover(parent1->weightValues, parent2->weightValues, parent1->totalWeights, sbxCrossDistrIndex);
+        float *childWeights =
+            fnn_crossover(parent1->weightValues, parent2->weightValues, parent1->totalWeights, sbxCrossDistrIndex);
         if (childWeights == NULL) {
             fnn_free(child);
             return NULL;
@@ -183,7 +182,7 @@ FnnModel *fnn_modelBreed(FnnModel *parent1, FnnModel *parent2, float sbxCrossDis
     child->layerCount = parent1->layerCount;
     child->totalWeights = parent1->totalWeights;
     child->totalBiases = parent1->totalBiases;
-    
+
     child->neuronCounts = (uint32_t *)malloc(sizeof(uint32_t) * parent1->layerCount);
     if (child->neuronCounts == NULL) {
         fnn_free(child);

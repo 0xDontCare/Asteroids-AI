@@ -1,10 +1,9 @@
 #ifndef MANINSTANCE_H
 #define MANINSTANCE_H
 
-#include <inttypes.h>
-#include <unistd.h>
-
-#include "xArray.h"
+#include <inttypes.h>  // standard integer types (for fixed size integers)
+#include <unistd.h>    // standard symbolic constants and types (for POSIX OS API)
+#include "xArray.h"    // dynamic array structure
 
 #define FITNESS_WEIGHT_SCORE 0.5f
 #define FITNESS_WEIGHT_TIME 0.2f

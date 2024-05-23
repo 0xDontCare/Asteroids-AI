@@ -15,9 +15,8 @@
 #ifndef XSTRINGIO_H
 #define XSTRINGIO_H
 
-#include <stdio.h>  // file and stream I/O
-
-#include "xString.h"  // base xString module
+#include <stdio.h>    // file and stream I/O
+#include "xString.h"  // base xString library
 
 #ifdef __cplusplus
 extern "C" {

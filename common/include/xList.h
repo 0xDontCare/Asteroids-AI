@@ -16,8 +16,6 @@
 extern "C" {
 #endif
 
-#include <stdlib.h>
-
 /**
  * @brief
  * Linked list node structure which contains data and pointers to next and previous node. If there is no next or previous node, pointer is NULL.

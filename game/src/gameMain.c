@@ -536,7 +536,7 @@ static void InitGame(void)
 
     // initialization of player
     shipHeight = (PLAYER_BASE_SIZE / 2) / tanf(20 * DEG2RAD);
-    player.position = (Vector2){screenWidth / 2, screenHeight / 2 - shipHeight / 2};
+    player.position = (Vector2){(float)screenWidth / 2, (float)screenHeight / 2 - shipHeight / 2};
     player.speed = (Vector2){0, 0};
     player.acceleration = (Vector2){0, 0};
     player.rotation = -(PI / 2);
