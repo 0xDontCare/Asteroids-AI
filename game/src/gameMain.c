@@ -1,14 +1,12 @@
-#include "gameMain.h"  // game enums, structs, constant definitions, etc.
-
-#include <fcntl.h>    // file control options (open, close, etc.)
-#include <raylib.h>   // graphics library
-#include <raymath.h>  // math library
-#include <signal.h>   // signal handling library
-#include <stdio.h>    // standard input/output library
-#include <stdlib.h>   // standard library (malloc, free, etc.)
-#include <time.h>     // time library (game logic timer and random seed)
-#include <unistd.h>   // UNIX standard library (fork, exec, etc.)
-
+#include "gameMain.h"       // game enums, structs, constant definitions, etc.
+#include <fcntl.h>          // file control options (open, close, etc.)
+#include <raylib.h>         // graphics library
+#include <raymath.h>        // math library
+#include <signal.h>         // signal handling library
+#include <stdio.h>          // standard input/output library
+#include <stdlib.h>         // standard library (malloc, free, etc.)
+#include <time.h>           // time library (game logic timer and random seed)
+#include <unistd.h>         // UNIX standard library (fork, exec, etc.)
 #include "commonUtility.h"  // smaller utility functions which don't belong in any standalone module
 #include "sharedMemory.h"   //shared memory interfaces and functions (IPC)
 #include "xArray.h"         // dynamic array library
@@ -470,7 +468,8 @@ static inline void PregenAsteroids(void)
         float randomAngle = (rand() & 360) * DEG2RAD;
 
         newAsteroid->position = (Vector2){posx, posy};
-        newAsteroid->speed = Vector2Scale((Vector2){cosf(randomAngle), sinf(randomAngle)}, ASTEROID_SPEED);
+        newAsteroid->speed =
+            Vector2Scale((Vector2){cosf(randomAngle), sinf(randomAngle)}, ASTEROID_SPEED * ((float)rand() / (float)RAND_MAX));
         newAsteroid->radius = AsteroidRadius(newAsteroid->sizeClass + 2);
         newAsteroid->active = true;
         newAsteroid->color = WHITE;
@@ -680,8 +679,7 @@ static void UpdateGame(void)
             }
 
             // asteroid logic
-            player.collider = (Vector3){player.position.x /* + cosf(player.rotation) * (shipHeight / 2.5f)*/,
-                                        player.position.y /* + sinf(player.rotation) * (shipHeight / 2.5f)*/, 12};
+            player.collider = (Vector3){player.position.x, player.position.y, 12};
             for (int i = 0; i < asteroids->size; i++) {
                 Asteroid *asteroid = (Asteroid *)xArray_get(asteroids, i);
                 if (!asteroid->active)
