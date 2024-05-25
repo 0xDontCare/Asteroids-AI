@@ -798,6 +798,9 @@ static void *thr_instanceStarter(void *arg)
                     waitpid(instance->gamePID, NULL, 0);
                     waitpid(instance->aiPID, NULL, 0);
 
+                    instance->gamePID = -1;
+                    instance->aiPID = -1;
+
                     // update instance status
                     instance->currSeed = instance->currSeed + 1;
                     if (instance->status & INSTANCE_ERRORED) {
