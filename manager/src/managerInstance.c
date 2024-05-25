@@ -29,7 +29,8 @@ static uint32_t maxParallel = 0;      // maximum number of parallel instances
 static uint32_t maxIterations = 0;    // maximum number of iterations
 static uint32_t epochIterations = 0;  // number of iterations before updating seed for game randomization
 static uint32_t elitismCount = 0;     // number of best instances to keep in next generation
-static uint32_t randSeed = 0;         // random seed for starting entire generation under same conditions
+static uint32_t randSeedCount = 0;    // number of random seeds to use before evaluating instance fitness
+static uint32_t *randSeed = NULL;     // random seeds for training generations of instances
 static char *populationDir = NULL;    // path to the loaded population directory
 
 static bool instancesRunning = false;  // flag indicating if instances are running
@@ -104,6 +105,12 @@ void mInstancer_cleanup(void)
         }
 
         instance_free(instance);
+    }
+
+    // free random seed array
+    if (randSeed != NULL) {
+        free(randSeed);
+        randSeed = NULL;
     }
 
     // free all instancer structures
@@ -284,6 +291,7 @@ int32_t mInstancer_killIndividual(uint32_t instanceID)
     kill(instance->gamePID, SIGTERM);
     kill(instance->aiPID, SIGTERM);
     instance->status = INSTANCE_ERRORED;
+    instance->fitnessScore = 0.0f;  // avoid propagating this instance to next generation
 
     pthread_mutex_unlock(&instancerMutex);
     return 0;
@@ -383,6 +391,21 @@ void mInstancer_setElitismCount(uint32_t value)
     pthread_mutex_unlock(&instancerMutex);
 }
 
+void mInstancer_setSeedCount(uint32_t value)
+{
+    if (value < 1) {
+        value = 1;
+    }
+
+    pthread_mutex_lock(&instancerMutex);
+    if (randSeed != NULL) {
+        free(randSeed);
+        randSeed = NULL;
+    }
+    randSeedCount = value;
+    pthread_mutex_unlock(&instancerMutex);
+}
+
 //------------------------------------------------------------------------------------
 // local function definitions
 
@@ -412,6 +435,7 @@ static managerInstance_t *instance_new(char *modelPath)
     instance->modelPath = modelPath;
     instance->generation = 0;
     instance->fitnessScore = 0.0f;
+    instance->currSeed = 0;
 
     // construct shared memory keys
     int32_t i;
@@ -510,7 +534,7 @@ static int instance_start(uint32_t instanceID)
     pid_t gamePID = fork();
     if (gamePID == 0) {
         char randSeedStr[16];
-        sprintf(randSeedStr, "%u", randSeed);
+        sprintf(randSeedStr, "%u", randSeed[instance->currSeed]);
         char *gameArgs[] = {"./bin/game",          "-m", instance->shmemInput, instance->shmemOutput,
                             instance->shmemStatus, "-r", randSeedStr,          NULL};
         execv(gameArgs[0], gameArgs);
@@ -566,10 +590,15 @@ static void instance_writeReport(const xArray *descriptorArray)
         fprintf(reportFile, "Instance ID,Exit status,Model path,Generation ID,Game seed,Fitness\n");
     }
     fseek(reportFile, 0, SEEK_END);
+
+    // write each instance data to report file
     for (int i = 0; i < descriptorArray->size; i++) {
         managerInstance_t *instance = (managerInstance_t *)xArray_get(descriptorArray, i);
-        fprintf(reportFile, "%d,%d,%s,%d,%u,%f\n", instance->instanceID, instance->status, instance->modelPath,
-                instance->generation, randSeed, instance->fitnessScore);
+        fprintf(reportFile, "%d,%d,%s,%d,", instance->instanceID, instance->status, instance->modelPath, instance->generation);
+        for (uint32_t j = 0; j < randSeedCount; j++) {
+            fprintf(reportFile, "%u%s", randSeed[j], (j < randSeedCount - 1) ? "|" : "");
+        }
+        fprintf(reportFile, ",%f\n", instance->fitnessScore);
     }
 
     pthread_mutex_unlock(&instancerMutex);
@@ -679,7 +708,14 @@ static void *thr_instanceStarter(void *arg)
 {
     (void)arg;  // ignore args
 
-    randSeed = (uint32_t)rand();
+    randSeed = (uint32_t *)malloc(randSeedCount * sizeof(uint32_t));
+    if (randSeed == NULL) {
+        return NULL;
+    }
+    for (uint32_t i = 0; i < randSeedCount; i++) {
+        randSeed[i] = (uint32_t)rand();
+    }
+    uint32_t nextUpdateSeed = 0;
     uint32_t parallelMax = maxParallel;
     uint32_t iterationMax = maxIterations;
 
@@ -694,7 +730,9 @@ static void *thr_instanceStarter(void *arg)
 
         if (epochIterations > 0 && iteration % epochIterations == 0) {
             srand((unsigned int)time(NULL) ^ (unsigned int)rand());
-            randSeed = (uint32_t)rand();
+            for (uint32_t i = 0; i < randSeedCount; i++) {
+                randSeed[i] = (uint32_t)rand();
+            }
         }
 
         // set all loaded instances to waiting state
@@ -711,12 +749,18 @@ static void *thr_instanceStarter(void *arg)
             pthread_mutex_lock(&instancerMutex);
 
             // start next instance if possible
-            if (nextStarting < (uint32_t)descriptors->size && runningInstances < parallelMax) {
-                instance_start(nextStarting);
-                if (((managerInstance_t *)xArray_get(descriptors, nextStarting))->status == INSTANCE_RUNNING)
-                    runningInstances++;
-                nextStarting++;
+            for (uint32_t i = nextStarting; runningInstances < parallelMax && i < (uint32_t)descriptors->size; i++) {
+                managerInstance_t *instance = (managerInstance_t *)xArray_get(descriptors, i);
+                if (instance->status & INSTANCE_WAITING) {
+                    if (instance_start(instance->instanceID) == 0) {
+                        runningInstances++;
+                    } else {
+                        nextStarting = i;
+                        break;
+                    }
+                }
             }
+            nextStarting %= (uint32_t)descriptors->size;
 
             // update descriptors of finished, errored and running instances
             for (int i = 0; i < descriptors->size; i++) {
@@ -740,9 +784,9 @@ static void *thr_instanceStarter(void *arg)
                         sm_lockSharedState(shStat);
                         if (shStat->game_isOver) {
                             instance->status = INSTANCE_FINISHED;
-                            instance->fitnessScore = shStat->game_gameScore * FITNESS_WEIGHT_SCORE +
-                                                     shStat->game_gameTime * FITNESS_WEIGHT_TIME +
-                                                     shStat->game_gameLevel * FITNESS_WEIGHT_LEVEL;
+                            instance->fitnessScore += shStat->game_gameScore * FITNESS_WEIGHT_SCORE +
+                                                      shStat->game_gameTime * FITNESS_WEIGHT_TIME +
+                                                      shStat->game_gameLevel * FITNESS_WEIGHT_LEVEL;
                             shStat->control_gameExit = true;
                             shStat->control_neuronsExit = true;
                         }
@@ -755,7 +799,17 @@ static void *thr_instanceStarter(void *arg)
                     waitpid(instance->aiPID, NULL, 0);
 
                     // update instance status
-                    instance->status = (instance->status & INSTANCE_FINISHED) ? INSTANCE_ENDED : INSTANCE_ERRENDED;
+                    instance->currSeed = instance->currSeed + 1;
+                    if (instance->status & INSTANCE_ERRORED) {
+                        instance->status = INSTANCE_ERRENDED;
+                    } else {
+                        if (instance->currSeed >= randSeedCount) {
+                            instance->fitnessScore /= (float)randSeedCount;
+                            instance->status = INSTANCE_ENDED;
+                        } else {
+                            instance->status = INSTANCE_WAITING;
+                        }
+                    }
 
                     runningInstances--;
                 }
@@ -769,6 +823,11 @@ static void *thr_instanceStarter(void *arg)
 
                 if (instance_nextgen(descriptors) != 0) {
                     break;
+                }
+
+                if (epochIterations == 0) {
+                    randSeed[nextUpdateSeed] = (uint32_t)rand();
+                    nextUpdateSeed = (nextUpdateSeed + 1) % randSeedCount;
                 }
             }
 

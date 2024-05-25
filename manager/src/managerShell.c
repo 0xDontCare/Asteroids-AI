@@ -500,7 +500,8 @@ int cmd_populationLoad(void)
 
 int cmd_generationStart(void)
 {
-    // ask user for max parallel instances, evolution iterations, epoch size and elitism count
+    // ask user for max parallel instances, evolution iterations, epoch size, elitism count and number of random seeds to use for
+    // single generation
     printf("\tMax parallel instances: ");
     xString *parallelCountStr = xString_readInSafe(6);
     if (parallelCountStr == NULL) {
@@ -525,7 +526,7 @@ int cmd_generationStart(void)
     mInstancer_setMaxIterations((uint32_t)xString_toInt(iterationCountStr));
     xString_free(iterationCountStr);
 
-    printf("\tEpoch size (iterations before updating training seed): ");
+    printf("\tEpoch size (iterations before updating all seeds) (0 to disable): ");
     xString *epochSizeStr = xString_readInSafe(6);
     if (epochSizeStr == NULL) {
         return 1;
@@ -549,6 +550,18 @@ int cmd_generationStart(void)
     mInstancer_setElitismCount((uint32_t)xString_toInt(elitismCountStr));
     xString_free(elitismCountStr);
 
+    printf("\tSeed count (minimally 1): ");
+    xString *seedCountStr = xString_readInSafe(6);
+    if (seedCountStr == NULL) {
+        return 1;
+    } else if (xString_isEmpty(seedCountStr)) {
+        printf("\t[ERR]: Invalid seed count\n");
+        xString_free(seedCountStr);
+        return 0;
+    }
+    mInstancer_setSeedCount((uint32_t)xString_toInt(seedCountStr));
+    xString_free(seedCountStr);
+
     if (mInstancer_startPopulation() != 0) {
         printf("\t[ERR]: Failed to start generation\n");
         return 1;
@@ -567,11 +580,12 @@ int cmd_generationStatus(void)
     }
 
     // print population information
-    printf("ID  | Status | Game PID | AI PID | Model path                     | Generation | Fitness score\n");
+    printf("ID  | SeedIdx | Status | Game PID | AI PID | Model path                     | Generation | Fitness score\n");
     for (int32_t i = 0; i < descriptors->size; i++) {
         const managerInstance_t *instance = (const managerInstance_t *)xArray_get(descriptors, i);
-        printf("%3d | %6x |   %6d | %6d | %-30s | %10d | %11.2f\n", instance->instanceID, instance->status, instance->gamePID,
-               instance->aiPID, instance->modelPath, instance->generation, instance->fitnessScore);
+        printf("%3d | %7d | %6x |   %6d | %6d | %-30s | %10d | %11.2f\n", instance->instanceID, instance->currSeed,
+               instance->status, instance->gamePID, instance->aiPID, instance->modelPath, instance->generation,
+               instance->fitnessScore);
     }
 
     return 0;
