@@ -784,9 +784,9 @@ static void *thr_instanceStarter(void *arg)
                         sm_lockSharedState(shStat);
                         if (shStat->game_isOver) {
                             instance->status = INSTANCE_FINISHED;
-                            instance->fitnessScore += shStat->game_gameScore * FITNESS_WEIGHT_SCORE +
-                                                      shStat->game_gameTime * FITNESS_WEIGHT_TIME +
-                                                      shStat->game_gameLevel * FITNESS_WEIGHT_LEVEL;
+                            instance->fitnessScore +=
+                                (shStat->game_gameScore * FITNESS_WEIGHT_SCORE + shStat->game_gameTime * FITNESS_WEIGHT_TIME +
+                                 shStat->game_gameLevel * FITNESS_WEIGHT_LEVEL) / randSeedCount;
                             shStat->control_gameExit = true;
                             shStat->control_neuronsExit = true;
                         }
@@ -807,7 +807,6 @@ static void *thr_instanceStarter(void *arg)
                         instance->status = INSTANCE_ERRENDED;
                     } else {
                         if (instance->currSeed >= randSeedCount) {
-                            instance->fitnessScore /= (float)randSeedCount;
                             instance->status = INSTANCE_ENDED;
                         } else {
                             instance->status = INSTANCE_WAITING;
