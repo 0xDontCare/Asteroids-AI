@@ -1,8 +1,7 @@
 #include "fnnSerializer.h"
-
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include <stdint.h>  // standard integer types for fixed integer width in file format (uint32_t, ...)
+#include <stdio.h>   // standard I/O (fprintf, ...)
+#include <stdlib.h>  // standard library (for malloc, free, ...)
 
 FnnModel *fnn_new(void)
 {

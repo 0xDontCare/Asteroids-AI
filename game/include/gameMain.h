@@ -12,7 +12,7 @@
 #ifndef MAIN_H
 #define MAIN_H
 
-#include <raylib.h>
+#include <raylib.h>  // raylib library
 
 // ------------------------------------------------------------------
 // game enum definitions

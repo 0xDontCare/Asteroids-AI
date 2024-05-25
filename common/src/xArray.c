@@ -1,6 +1,5 @@
 #include "xArray.h"
-
-#include <stdlib.h>
+#include <stdlib.h>  // standard library (for malloc, free)
 
 // DISABLED BECAUSE OF ISSUES
 /*
@@ -172,9 +171,9 @@ void xArray_sort(xArray *arr, int (*comparator)(const void *, const void *))
     }
     // xArray_quicksort(arr->data, arr->size, comparator);
 
-    for(int i = 0; i < arr->size; i++) {
-        for(int j = i + 1; j < arr->size; j++) {
-            if(comparator(arr->data[i], arr->data[j]) > 0) {
+    for (int i = 0; i < arr->size; i++) {
+        for (int j = i + 1; j < arr->size; j++) {
+            if (comparator(arr->data[i], arr->data[j]) > 0) {
                 xArray_swap(arr, i, j);
             }
         }

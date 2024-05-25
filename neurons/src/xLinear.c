@@ -1,7 +1,6 @@
 #include "xLinear.h"
-
-#include <stdint.h>
-#include <stdlib.h>
+#include <stdint.h>  // universal integer types
+#include <stdlib.h>  // standard library (for malloc, free)
 
 xMatrix *xMatrix_new(uint32_t rows, uint32_t cols)
 {

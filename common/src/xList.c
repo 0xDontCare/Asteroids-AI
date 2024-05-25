@@ -1,6 +1,5 @@
 #include "xList.h"
-
-#include <stdlib.h>
+#include <stdlib.h>  // standard library (for malloc, free)
 
 xList *xList_new(void)
 {

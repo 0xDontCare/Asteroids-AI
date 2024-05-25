@@ -1,14 +1,12 @@
-#include "gameMain.h"  // game enums, structs, constant definitions, etc.
-
-#include <fcntl.h>    // file control options (open, close, etc.)
-#include <raylib.h>   // graphics library
-#include <raymath.h>  // math library
-#include <signal.h>   // signal handling library
-#include <stdio.h>    // standard input/output library
-#include <stdlib.h>   // standard library (malloc, free, etc.)
-#include <time.h>     // time library (game logic timer and random seed)
-#include <unistd.h>   // UNIX standard library (fork, exec, etc.)
-
+#include "gameMain.h"       // game enums, structs, constant definitions, etc.
+#include <fcntl.h>          // file control options (open, close, etc.)
+#include <raylib.h>         // graphics library
+#include <raymath.h>        // math library
+#include <signal.h>         // signal handling library
+#include <stdio.h>          // standard input/output library
+#include <stdlib.h>         // standard library (malloc, free, etc.)
+#include <time.h>           // time library (game logic timer and random seed)
+#include <unistd.h>         // UNIX standard library (fork, exec, etc.)
 #include "commonUtility.h"  // smaller utility functions which don't belong in any standalone module
 #include "sharedMemory.h"   //shared memory interfaces and functions (IPC)
 #include "xArray.h"         // dynamic array library
@@ -182,7 +180,7 @@ int main(int argc, char *argv[])
         return 0;
     } else if (flags_cmd & CMD_FLAG_VERSION) {
         printf("Program:\t\tAsteroids-game\n");
-        printf("Version:\t\tDEV (P3.0)\n");
+        printf("Version:\t\t3.0a\n");
         printf("Compiler version:\t%s\n", __VERSION__);
         printf("Raylib version:\t\t%s\n", RAYLIB_VERSION);
         printf("Compiled on %s at %s\n", __DATE__, __TIME__);
@@ -417,7 +415,7 @@ static inline void UpdateSharedOutput(void)
         shOutput->gameOutput01 = player.rotation / PI;
         shOutput->gameOutput02 = relativeVelocity.x / (ASTEROID_SPEED + PLAYER_MAX_SPEED);
         shOutput->gameOutput03 = relativeVelocity.y / (ASTEROID_SPEED + PLAYER_MAX_SPEED);
-        shOutput->gameOutput04 = closestAsteroid.x / screenDiagonal;
+        shOutput->gameOutput04 = (closestAsteroid.x - player.collider.z) / screenDiagonal;
         shOutput->gameOutput05 = closestAsteroid.y / PI;
         sm_unlockSharedOutput(shOutput);
     }
@@ -470,7 +468,8 @@ static inline void PregenAsteroids(void)
         float randomAngle = (rand() & 360) * DEG2RAD;
 
         newAsteroid->position = (Vector2){posx, posy};
-        newAsteroid->speed = Vector2Scale((Vector2){cosf(randomAngle), sinf(randomAngle)}, ASTEROID_SPEED);
+        newAsteroid->speed =
+            Vector2Scale((Vector2){cosf(randomAngle), sinf(randomAngle)}, ASTEROID_SPEED * ((float)rand() / (float)RAND_MAX));
         newAsteroid->radius = AsteroidRadius(newAsteroid->sizeClass + 2);
         newAsteroid->active = true;
         newAsteroid->color = WHITE;
@@ -502,7 +501,7 @@ static Vector2 ClosestAsteroid(void)
                                 (Vector2){asteroid->position.x - screenWidth, asteroid->position.y + screenHeight}};
 
         for (int j = 0; j < (int)(sizeof(positions) / sizeof(Vector2)); j++) {
-            float distance = Vector2Distance(player.position, positions[j]);
+            float distance = Vector2Distance(player.position, positions[j]) - asteroid->radius;
             if (distance < minDistance) {
                 minDistance = distance;
                 deltaRotation = atan2f(positions[j].y - player.position.y, positions[j].x - player.position.x) - player.rotation;
@@ -536,7 +535,7 @@ static void InitGame(void)
 
     // initialization of player
     shipHeight = (PLAYER_BASE_SIZE / 2) / tanf(20 * DEG2RAD);
-    player.position = (Vector2){screenWidth / 2, screenHeight / 2 - shipHeight / 2};
+    player.position = (Vector2){(float)screenWidth / 2, (float)screenHeight / 2 - shipHeight / 2};
     player.speed = (Vector2){0, 0};
     player.acceleration = (Vector2){0, 0};
     player.rotation = -(PI / 2);
@@ -680,8 +679,7 @@ static void UpdateGame(void)
             }
 
             // asteroid logic
-            player.collider = (Vector3){player.position.x + cosf(player.rotation) * (shipHeight / 2.5f),
-                                        player.position.y + sinf(player.rotation) * (shipHeight / 2.5f), 12};
+            player.collider = (Vector3){player.position.x, player.position.y, 12};
             for (int i = 0; i < asteroids->size; i++) {
                 Asteroid *asteroid = (Asteroid *)xArray_get(asteroids, i);
                 if (!asteroid->active)
@@ -793,12 +791,14 @@ static void DrawGame(void)
 
     if (!gameOver) {
         // Draw spaceship
-        Vector2 v1 = {player.position.x + cosf(player.rotation) * (shipHeight),
-                      player.position.y + sinf(player.rotation) * (shipHeight)};
-        Vector2 v2 = {player.position.x + sinf(player.rotation) * (PLAYER_BASE_SIZE / 2),
-                      player.position.y - cosf(player.rotation) * (PLAYER_BASE_SIZE / 2)};
-        Vector2 v3 = {player.position.x - sinf(player.rotation) * (PLAYER_BASE_SIZE / 2),
-                      player.position.y + cosf(player.rotation) * (PLAYER_BASE_SIZE / 2)};
+        Vector2 v1 = {player.position.x + cosf(player.rotation) * (shipHeight) * 0.5f,
+                      player.position.y + sinf(player.rotation) * (shipHeight) * 0.5f};
+        Vector2 v2 = {
+            player.position.x + sinf(player.rotation) * (PLAYER_BASE_SIZE / 2) - cosf(player.rotation) * (shipHeight) * 0.5f,
+            player.position.y - cosf(player.rotation) * (PLAYER_BASE_SIZE / 2) - sinf(player.rotation) * (shipHeight) * 0.5f};
+        Vector2 v3 = {
+            player.position.x - sinf(player.rotation) * (PLAYER_BASE_SIZE / 2) - cosf(player.rotation) * (shipHeight) * 0.5f,
+            player.position.y + cosf(player.rotation) * (PLAYER_BASE_SIZE / 2) - sinf(player.rotation) * (shipHeight) * 0.5f};
         DrawTriangleLines(v1, v2, v3, player.color);
 
         // Draw asteroids

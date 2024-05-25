@@ -1,13 +1,12 @@
 #include "sharedMemory.h"
-
-#include <fcntl.h>
-#include <pthread.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/mman.h>
-#include <sys/stat.h>
-#include <unistd.h>
+#include <fcntl.h>     // file control option flags (O_CREAT, O_RDWR)
+#include <pthread.h>   // POSIX threads (mutex)
+#include <stdbool.h>   // boolean type (true, false values)
+#include <stdio.h>     // standard I/O (perror, ...)
+#include <stdlib.h>    // standard library (exit, ...)
+#include <sys/mman.h>  // memory management (mmap, munmap)
+#include <sys/stat.h>  // status of file or file system (for mode constants)
+#include <unistd.h>    // standard symbolic constants and types (for POSIX OS API)
 
 int sm_validateSharedMemoryName(const char *sharedMemoryName)
 {

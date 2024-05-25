@@ -1,6 +1,5 @@
 #include "xString.h"
-
-#include <stdlib.h>
+#include <stdlib.h>  // standard library (for malloc, free)
 
 xString *xString_new(void)
 {

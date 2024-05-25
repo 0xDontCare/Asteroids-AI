@@ -1,10 +1,9 @@
 #ifndef MANINSTANCE_H
 #define MANINSTANCE_H
 
-#include <inttypes.h>
-#include <unistd.h>
-
-#include "xArray.h"
+#include <inttypes.h>  // standard integer types (for fixed size integers)
+#include <unistd.h>    // standard symbolic constants and types (for POSIX OS API)
+#include "xArray.h"    // dynamic array structure
 
 #define FITNESS_WEIGHT_SCORE 0.5f
 #define FITNESS_WEIGHT_TIME 0.2f
@@ -42,6 +41,7 @@ typedef struct {
     char *modelPath;      // path to the model file
     uint32_t generation;  // generation number
     float fitnessScore;   // fitness score
+    uint32_t currSeed;    // index of currently used seed of generation
 } managerInstance_t;
 
 /**
@@ -160,5 +160,12 @@ void mInstancer_setEpochSize(uint32_t value);
  * @param value Number of elite individuals (maximally population size - 1)
  */
 void mInstancer_setElitismCount(uint32_t value);
+
+/**
+ * @brief Set number of seeds to use for training single generation
+ *
+ * @param value Number of seeds (minimally 1)
+ */
+void mInstancer_setSeedCount(uint32_t value);
 
 #endif  // MANINSTANCE_H

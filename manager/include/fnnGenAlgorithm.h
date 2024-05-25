@@ -16,9 +16,8 @@
 extern "C" {
 #endif
 
-#include <stdint.h>
-
-#include "fnnSerializer.h"
+#include <stdint.h>         // standard integer types (uint32_t, ...)
+#include "fnnSerializer.h"  // FNN model descriptor and serialization functions
 
 /**
  * @brief Generate randomized feedforward neural network model based on given parameters
@@ -59,8 +58,7 @@ FnnModel *fnn_generateModel(uint32_t *neuronCounts, FnnActivation_e *activationF
  *
  * @note The mutation is done using normal distribution around the current value.
  */
-FnnModel *fnn_modelBreed(FnnModel *parent1, FnnModel *parent2, float sbxCrossDistrIndex, float mutationRate,
-                            float mutationStddev);
+FnnModel *fnn_modelBreed(FnnModel *parent1, FnnModel *parent2, float sbxCrossDistrIndex, float mutationRate, float mutationStddev);
 
 /**
  * @brief Generate random weights for the FNN based on given layer neurons and range

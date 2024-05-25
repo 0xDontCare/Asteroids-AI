@@ -1,6 +1,5 @@
 #include "commonUtility.h"
-
-#include <stdlib.h>
+#include <stdlib.h>  // standard library (for malloc, free, realloc)
 
 int cu_CStringCompare(const char *str1, const char *str2)
 {

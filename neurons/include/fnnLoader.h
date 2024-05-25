@@ -18,8 +18,6 @@ extern "C" {
 #endif
 
 #include <stdint.h>
-
-#include "fnnSerializer.h"
 #include "xList.h"
 
 /**

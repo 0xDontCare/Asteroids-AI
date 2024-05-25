@@ -1,8 +1,7 @@
 #include "fnnLoader.h"
-
-#include <stdint.h>  // universal integer types
-#include <stdio.h>   // fprintf (for error messages)
-
+#include <stdint.h>         // universal integer types
+#include <stdio.h>          // fprintf (for error messages)
+#include <stdlib.h>         // malloc (for memory allocation)
 #include "fnnSerializer.h"  // FNN model descriptor
 #include "xLinear.h"        // xMatrix objects for layer information
 #include "xList.h"          // xList object for storing xMatrix objects in one package for return
