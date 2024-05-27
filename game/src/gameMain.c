@@ -722,7 +722,7 @@ static void UpdateGame(void)
                         bullet[i].active = false;
                         bullet[i].lifeSpawn = 0;
                         asteroid->active = false;
-                        score += (asteroid->sizeClass == 3) ? 25 : (asteroid->sizeClass == 2) ? 50 : 100;
+                        score += (asteroid->sizeClass == 3) ? 20 : (asteroid->sizeClass == 2) ? 50 : 100;
                         destroyedMeteorsCount++;
 
                         // spawn smaller asteroids
