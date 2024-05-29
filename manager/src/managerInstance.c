@@ -8,6 +8,7 @@
 #include <sys/stat.h>         // file status
 #include <sys/types.h>        // data types
 #include <sys/wait.h>         // waitpid (for child process termination)
+#include <time.h>             // time types and functions
 #include <unistd.h>           // standard symbolic constants and types
 #include "commonUtility.h"    // common utility functions
 #include "fnnGenAlgorithm.h"  // feedforward neural network genetic algorithm functions
@@ -432,6 +433,8 @@ static managerInstance_t *instance_new(char *modelPath)
     instance->status = INSTANCE_INACTIVE;
     instance->gamePID = -1;
     instance->aiPID = -1;
+    instance->scoreUpdateValue = 0;
+    instance->scoreUpdateTime = 0;
     instance->modelPath = modelPath;
     instance->generation = 0;
     instance->fitnessScore = 0.0f;
@@ -559,6 +562,7 @@ static int instance_start(uint32_t instanceID)
 
     // update instance status
     instance->status = INSTANCE_RUNNING;
+    instance->scoreUpdateTime = 5;  // give initial 5 seconds on start to avoid instant autokill
 
     return 0;
 }
@@ -783,12 +787,26 @@ static void *thr_instanceStarter(void *arg)
                             (struct sharedState_s *)xDictionary_get(shStatDict, cu_CStringHash(instance->shmemStatus));
                         sm_lockSharedState(shStat);
                         if (shStat->game_isOver) {
+                            // game ended, evaluate instance and end processes
                             instance->status = INSTANCE_FINISHED;
                             instance->fitnessScore +=
                                 (shStat->game_gameScore * FITNESS_WEIGHT_SCORE + shStat->game_gameTime * FITNESS_WEIGHT_TIME +
-                                 shStat->game_gameLevel * FITNESS_WEIGHT_LEVEL) / randSeedCount;
+                                 shStat->game_gameLevel * FITNESS_WEIGHT_LEVEL) /
+                                randSeedCount;
                             shStat->control_gameExit = true;
                             shStat->control_neuronsExit = true;
+                        } else {
+                            if (instance->scoreUpdateValue != shStat->game_gameScore) {
+                                // autokill mechanism (score changed, reset kill timer)
+                                instance->scoreUpdateValue = shStat->game_gameScore;
+                                instance->scoreUpdateTime = shStat->game_gameTime;
+                            } else if (shStat->game_gameTime - instance->scoreUpdateTime > AUTOKILL_TIMEOUT) {
+                                // autokill mechanism (if score doesn't progress for set amount of time, kill the instance)
+                                instance->status = INSTANCE_ERRORED;
+                                shStat->control_gameExit = true;
+                                shStat->control_neuronsExit = true;
+                                instance->fitnessScore = 0.0f;  // reset fitness to remove this instance fully
+                            }
                         }
                         sm_unlockSharedState(shStat);
                     }

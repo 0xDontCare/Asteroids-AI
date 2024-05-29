@@ -13,6 +13,8 @@
 #define BREED_MUTATION_RATE 0.1f
 #define BREED_MUTATION_STDDEV 0.1f
 
+#define AUTOKILL_TIMEOUT 60  // timeout in seconds before killing instance if no score update happens
+
 enum instanceStatus_e {
     INSTANCE_INACTIVE = 0x00,
     INSTANCE_WAITING = 0x01,
@@ -32,6 +34,9 @@ typedef struct {
 
     pid_t gamePID;  // game process ID
     pid_t aiPID;    // AI process ID
+
+    int scoreUpdateValue;    // last updated score value
+    long scoreUpdateTime;  // time of updating score
 
     // uint32_t sharedMemoryID;  // shared memory ID
     char shmemInput[255];   // input shared memory key
