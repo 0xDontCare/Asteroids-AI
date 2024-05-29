@@ -297,7 +297,7 @@ int cmd_help(void)
 int cmd_version(void)
 {
     printf("\tProgram:\t\tAstroMGR\n"
-           "\tVersion:\t\t3.0a\n"
+           "\tVersion:\t\t3.1\n"
            "\tCompiler version:\t"__VERSION__
            "\n"
            "\tCompiled on %s at %s\n",
