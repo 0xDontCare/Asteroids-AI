@@ -13,7 +13,7 @@
 #define BREED_MUTATION_RATE 0.1f
 #define BREED_MUTATION_STDDEV 0.1f
 
-#define AUTOKILL_TIMEOUT 60  // timeout in seconds before killing instance if no score update happens
+#define AUTOKILL_TIMEOUT 20  // timeout in seconds before killing instance if no score update happens
 
 enum instanceStatus_e {
     INSTANCE_INACTIVE = 0x00,
