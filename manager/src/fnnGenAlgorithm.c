@@ -54,11 +54,12 @@ static float distanceFactor(float distrIndex)
     }
 
     // generate positive random number smaller than 1
-    float random = (float)rand() / (float)RAND_MAX;
+    float random = (float)rand();
+    random = (random == (float)RAND_MAX) ? (random - 1.0f) / (float)RAND_MAX : random / (float)RAND_MAX;
 
     // calculate the distance factor
-    return (random > 0.5f) ? powf(2.0f * random, 1.0f / (distrIndex + 1.0f))
-                           : 1.0f / powf(2.0f * (1.0f - random), 1.0f / (distrIndex + 1.0f));
+    return (random <= 0.5f) ? powf(2.0f * random, 1.0f / (distrIndex + 1.0f))
+                            : powf(1.0f / (2.0f * (1.0f - random)), 1.0f / (distrIndex + 1.0f));
 }
 
 /**
